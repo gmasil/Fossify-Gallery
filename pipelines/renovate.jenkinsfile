@@ -1,0 +1,31 @@
+pipeline {
+    agent {
+        docker {
+            image "registry.gmasil.de/docker/maven-build-container"
+        }
+    }
+    triggers {
+        cron('15 6 * * *')
+    }
+    stages {
+        stage("Update master") {
+            when {
+                branch 'update-master'
+            }
+            steps {
+                sh("git remote add upstream git@github.com:FossifyOrg/Gallery.git")
+                sh("git checkout master")
+                sh("git pull upstream master")
+                sh("git push")
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+            dir("${env.WORKSPACE}@tmp") {
+                deleteDir()
+            }
+        }
+    }
+}
