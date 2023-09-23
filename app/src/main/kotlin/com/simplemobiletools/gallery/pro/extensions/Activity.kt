@@ -38,6 +38,7 @@ import com.simplemobiletools.gallery.pro.R
 import com.simplemobiletools.gallery.pro.activities.MediaActivity
 import com.simplemobiletools.gallery.pro.activities.SettingsActivity
 import com.simplemobiletools.gallery.pro.activities.SimpleActivity
+import com.simplemobiletools.gallery.pro.converter.AnimatedImageConverter
 import com.simplemobiletools.gallery.pro.dialogs.AllFilesPermissionDialog
 import com.simplemobiletools.gallery.pro.dialogs.PickDirectoryDialog
 import com.simplemobiletools.gallery.pro.dialogs.ResizeMultipleImagesDialog
@@ -51,7 +52,18 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 fun Activity.sharePath(path: String) {
-    sharePathIntent(path, BuildConfig.APPLICATION_ID)
+    ensureBackgroundThread {
+        if (path.lowercase().endsWith(".webp") || path.lowercase().endsWith(".gif")) {
+            try {
+                sharePathIntent(AnimatedImageConverter(this).convertAnimatedImage(path).absolutePath, BuildConfig.APPLICATION_ID)
+                return@ensureBackgroundThread
+            } catch (e: Exception) {
+                toast("${e.message}, sharing original...")
+                e.printStackTrace()
+            }
+        }
+        sharePathIntent(path, BuildConfig.APPLICATION_ID)
+    }
 }
 
 fun Activity.sharePaths(paths: ArrayList<String>) {

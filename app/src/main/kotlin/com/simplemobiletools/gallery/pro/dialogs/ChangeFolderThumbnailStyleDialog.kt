@@ -131,6 +131,7 @@ class ChangeFolderThumbnailStyleDialog(val activity: BaseSimpleActivity, val cal
         config.folderStyle = style
         config.showFolderMediaCount = count
         config.limitFolderTitle = binding.dialogFolderLimitTitle.isChecked
+
         callback()
     }
 }
