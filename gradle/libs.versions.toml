@@ -13,16 +13,16 @@ exif = "1.0.1"
 #Room
 room = "2.6.0-beta01"
 #Simple tools
-simple-commons = "c573613da9"
+simple-commons = "13f995cb51"
 #Gradle
-gradlePlugins-agp = "8.1.1"
+gradlePlugins-agp = "7.4.0"
 #Other
 androidGifDrawable = "1.2.25"
 androidImageCropper = "4.5.0"
-apng = "2.25.0"
-awebp = "2.25.0"
-glideCompiler = "4.15.1"
-zjupureWebpdecoder = "2.3.4.15.1"
+apng = "2.28.0"
+awebp = "2.28.0"
+glideCompiler = "4.16.0"
+zjupureWebpdecoder = "2.6.4.16.0"
 gestureviews = "a8e8fa8d27"
 androidsvgAar = "1.4"
 imagefilters = "1.0.7"
@@ -42,8 +42,8 @@ app-build-javaVersion = "VERSION_17"
 app-build-kotlinJVMTarget = "17"
 #versioning
 app-version-appId = "com.simplemobiletools.gallery.pro"
-app-version-versionCode = "394"
-app-version-versionName = "6.27.2"
+app-version-versionCode = "395"
+app-version-versionName = "6.28.0"
 subsamplingScaleImageView = "80efdaa570"
 [libraries]
 #AndroidX
