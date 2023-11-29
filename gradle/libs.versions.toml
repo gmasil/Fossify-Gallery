@@ -13,7 +13,7 @@ exif = "1.0.1"
 #Room
 room = "2.6.0-beta01"
 #Simple tools
-simple-commons = "13f995cb51"
+simple-commons = "9e60e24790"
 #Gradle
 gradlePlugins-agp = "7.4.0"
 #Other
@@ -42,8 +42,8 @@ app-build-javaVersion = "VERSION_17"
 app-build-kotlinJVMTarget = "17"
 #versioning
 app-version-appId = "com.simplemobiletools.gallery.pro"
-app-version-versionCode = "395"
-app-version-versionName = "6.28.0"
+app-version-versionCode = "396"
+app-version-versionName = "6.28.1"
 subsamplingScaleImageView = "80efdaa570"
 [libraries]
 #AndroidX
@@ -72,7 +72,7 @@ sdk-videowidget = { module = "com.google.vr:sdk-videowidget", version.ref = "sdk
 sdk-panowidget = { module = "com.google.vr:sdk-panowidget", version.ref = "sdkPanowidget" }
 apng = { module = "com.github.penfeizhou.android.animation:apng", version.ref = "apng" }
 awebp = { module = "com.github.penfeizhou.android.animation:awebp", version.ref = "awebp" }
-glide-compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glideCompiler" }
+glide-compiler = { module = "com.github.bumptech.glide:ksp", version.ref = "glideCompiler" }
 zjupure-webpdecoder = { module = "com.github.zjupure:webpdecoder", version.ref = "zjupureWebpdecoder" }
 picasso = { module = "com.squareup.picasso:picasso", version.ref = "picasso" }
 arthenica-ffmpeg = { module = "com.arthenica:ffmpeg-kit-full-gpl", version.ref = "ffmpeg" }
