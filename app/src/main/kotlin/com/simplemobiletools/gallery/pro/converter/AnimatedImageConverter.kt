@@ -33,7 +33,7 @@ class AnimatedImageConverter(val applicationContext: Context) {
         } else {
             throw IllegalArgumentException("Given file '$filePath' is not a supported animated image type")
         }
-        val targetFolder = "/storage/emulated/0/tmp"
+        val targetFolder = applicationContext.cacheDir.resolve("converter").absolutePath
         val frameCount = imageHandler.countFrames()
         if (frameCount > 1) {
             // animated
