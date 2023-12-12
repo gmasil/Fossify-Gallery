@@ -1045,6 +1045,14 @@ fun Context.createDirectoryFromMedia(
     }
 
     if (thumbnail == null) {
+        listOf("webp", "gif", "mp4", "png", "jpg", "jpeg").stream()
+            .map { File(path, "cover.$it") }
+            .filter { it.exists() }
+            .findFirst()
+            .ifPresent { thumbnail = it.path }
+    }
+
+    if (thumbnail == null) {
         val sortedMedia = grouped.filter { it is Medium }.toMutableList() as ArrayList<Medium>
         thumbnail = sortedMedia.firstOrNull { getDoesFilePathExist(it.path, OTGPath) }?.path ?: ""
     }
