@@ -2,6 +2,7 @@ pipeline {
     agent {
         docker {
             image "registry.gmasil.de/docker/maven-build-container"
+            args "-v /root/.ssh:/root/.ssh"
         }
     }
     triggers {
