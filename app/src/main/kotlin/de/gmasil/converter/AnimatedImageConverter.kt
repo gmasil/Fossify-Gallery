@@ -1,4 +1,4 @@
-package org.fossify.gallery.converter
+package de.gmasil.converter
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -7,9 +7,9 @@ import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegSession
 import com.arthenica.ffmpegkit.ReturnCode
 import org.fossify.commons.extensions.toast
-import org.fossify.gallery.converter.api.AnimatedImageHandler
-import org.fossify.gallery.converter.impl.GifImageHandler
-import org.fossify.gallery.converter.impl.WebpImageHandler
+import de.gmasil.converter.api.AnimatedImageHandler
+import de.gmasil.converter.impl.GifImageHandler
+import de.gmasil.converter.impl.WebpImageHandler
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream

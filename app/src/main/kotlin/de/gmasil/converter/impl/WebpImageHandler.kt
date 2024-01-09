@@ -1,4 +1,4 @@
-package org.fossify.gallery.converter.impl
+package de.gmasil.converter.impl
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -9,7 +9,7 @@ import com.bumptech.glide.integration.webp.decoder.WebpFrameCacheStrategy
 import com.bumptech.glide.integration.webp.decoder.WebpFrameLoader
 import com.bumptech.glide.load.Options
 import com.bumptech.glide.load.resource.gif.GifBitmapProvider
-import org.fossify.gallery.converter.api.AnimatedImageHandler
+import de.gmasil.converter.api.AnimatedImageHandler
 import java.io.File
 import java.nio.ByteBuffer
 

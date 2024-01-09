@@ -26,7 +26,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
-import org.fossify.gallery.converter.AnimatedImageConverter
+import de.gmasil.converter.AnimatedImageConverter
 import com.squareup.picasso.Picasso
 import org.fossify.commons.activities.BaseSimpleActivity
 import org.fossify.commons.dialogs.ConfirmationDialog

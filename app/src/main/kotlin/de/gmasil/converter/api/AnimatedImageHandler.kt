@@ -1,4 +1,4 @@
-package org.fossify.gallery.converter.api
+package de.gmasil.converter.api
 
 import android.graphics.Bitmap
 
