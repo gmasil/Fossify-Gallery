@@ -48,6 +48,7 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.util.Locale
+import java.util.Optional
 import kotlin.collections.set
 import kotlin.math.max
 
@@ -769,8 +770,9 @@ fun Context.getCachedMedia(path: String, getVideosOnly: Boolean = false, getImag
         }) as ArrayList<Medium>
 
         val pathToUse = if (path.isEmpty()) SHOW_ALL else path
-        mediaFetcher.sortMedia(media, config.getFolderSorting(pathToUse))
+        mediaFetcher.sortMedia(media, config.getFolderSorting(pathToUse), pathToUse)
         val grouped = mediaFetcher.groupMedia(media, pathToUse)
+
         callback(grouped.clone() as ArrayList<ThumbnailItem>)
         val OTGPath = config.OTGPath
 
@@ -1042,6 +1044,17 @@ fun Context.addPathToDB(path: String) {
     }
 }
 
+fun getCustomCoverImageExtensions(): List<String> {
+    return listOf("webp", "gif", "mp4", "png", "jpg", "jpeg")
+}
+
+fun getCustomCoverImage(path: String): Optional<File> {
+    return getCustomCoverImageExtensions().stream()
+        .map { File(path, "cover.$it") }
+        .filter { it.exists() }
+        .findFirst()
+}
+
 fun Context.createDirectoryFromMedia(
     path: String, curMedia: ArrayList<Medium>, albumCovers: ArrayList<AlbumCover>, hiddenString: String,
     includedFolders: MutableSet<String>, getProperFileSize: Boolean, noMediaFolders: ArrayList<String>
@@ -1057,11 +1070,7 @@ fun Context.createDirectoryFromMedia(
     }
 
     if (thumbnail == null) {
-        listOf("webp", "gif", "mp4", "png", "jpg", "jpeg").stream()
-            .map { File(path, "cover.$it") }
-            .filter { it.exists() }
-            .findFirst()
-            .ifPresent { thumbnail = it.path }
+        getCustomCoverImage(path).ifPresent { thumbnail = it.absolutePath }
     }
 
     if (thumbnail == null) {
