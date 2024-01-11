@@ -9,7 +9,7 @@ import org.fossify.gallery.models.Directory
 
 @Dao
 interface DirectoryDao {
-    @Query("SELECT path, thumbnail, filename, media_count, last_modified, date_taken, size, location, media_types, sort_value FROM directories")
+    @Query("SELECT id, path, thumbnail, filename, media_count, last_modified, date_taken, size, location, media_types, sort_value FROM directories")
     fun getAll(): List<Directory>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
