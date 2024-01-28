@@ -1,32 +1,27 @@
-Simple Gallery ger dig alla de funktioner för bildvisning och redigering som du har saknat på din Android i en snygg och lättanvänd app. Bläddra, hantera, beskära och redigera foton eller videor snabbare än någonsin, återställ oavsiktligt raderade filer eller skapa dolda gallerier för dina mest värdefulla bilder och videor. Och med avancerat filstöd och fullständig anpassning fungerar ditt galleri äntligen precis som du vill ha det.
+Släpp lös dina minnen, inte din personliga data. Fossify Gallery är den ultimata foto- och videoappen som är lika kraftfull som den skyddar din integritet. Ingen reklam, inga onödiga behörigheter bara en sömlös upplevelse för dig.
 
-AVANCERAD FOTOREDIGERARE
-Gör fotoredigering till en barnlek med Simple Gallerys förbättrade filorganisator och fotoalbum. Intuitiva gester gör det superenkelt att redigera dina bilder i farten. Beskär, vänd, rotera och ändra storlek på bilderna eller använd snygga filter för att få dem att framstå som snygga på ett ögonblick.
+🖼️ FOTOREDIGERING MED ETT KNAPPTRYCK:
+Förbättra dina foton med vår grundläggande men kraftiga fotoredigerare. Beskär, ändra storlek, rotera, spegelvänd, rita och tillämpa fräna filter. Allt utan att kränka din integritet. Ta kontrollen över dina minnen.
 
-ALLA FILER DU BEHÖVER
-Simple Gallery har stöd för ett stort antal olika filtyper, inklusive JPEG, PNG, MP4, MKV, RAW, SVG, GIF, Panoramafoton, videor och många fler, så att du har full flexibilitet när det gäller val av format. Har du någonsin undrat "Kan jag använda det här formatet på min Android"? Nu är svaret ja.
+🌐 INTEGRITETEN FÖRST, ALLTID:
+Din integritet räknas. Dumpa de datahungriga jättarna. Fossify Gallery ger dig kontrollen. Ta bort EXIF-metadata som GPS-koordinater och kameradetaljer, låter dina minnen förbi dina, bara dina.
 
-GÖR DET TILL DITT
-Simple Gallerys mycket anpassningsbara design gör att du kan få fotoappen att se ut, kännas och fungera precis som du vill ha den. Från användargränssnittet till funktionsknapparna i det nedre verktygsfältet ger Simple Gallery dig den kreativa frihet du behöver i en galleriapp.
+🔒 ÖVERLÄGSEN SÄKERHET:
+Lås dina minnen med en pinkod, mönster eller fingeravtryck. Säkra vissa foton, videor eller hela appen - du bestämmer vem som får tillgång. Sinnesfrid garanterad,
 
-ÅTERSTÄLLA RADERADE FOTON OCH VIDEOR
-Oroa dig aldrig för att av misstag radera det där värdefulla fotot eller videon som du bara inte kan ersätta. Med Simple Gallery kan du snabbt återskapa alla raderade foton och videor, vilket innebär att Simple Gallery utöver att vara det bästa mediegalleriet för Android även fungerar som en fantastisk fotovalvsapp.
+🔄 ÅTERSKAPA LÄTT:
+Andas lugnt, olyckor sker. Fossify Gallerys inbyggda papperskorg låter dig att återskapa raderade foton på sekunder. Inga mer förlorade skatter, bara lättnad.
 
-SKYDDA DINA PRIVATA FOTON, VIDEOR OCH FILER
-Du kan vara säker på att ditt fotoalbum är säkert. Med Simple Gallerys överlägsna säkerhetsfunktioner kan du använda en pinkod, ett mönster eller enhetens fingeravtrycksläsare för att begränsa vem som kan se eller redigera utvalda foton och videor eller komma åt viktiga filer. Du kan till och med skydda själva appen eller placera lås på specifika funktioner i filorganisatorn.
+🎨 DITT GALLERI, DIN FRIHET:
+Anpassa utseendet, känslan och funktionaliteten för att matcha din stil. Från användargränssnitt till knappar, Fossify Gallery ger din kreativa frihet som du suktar.
 
-Den levereras med en materialdesign och ett mörkt tema som standard, vilket ger en bra användarupplevelse för enkel användning. Avsaknaden av internetåtkomst ger dig mer integritet, säkerhet och stabilitet än andra appar.
+📷 VÄLJ DITT FILFORMAT:
+JPEG, PNG, MP4, MKV, RAW, SVG, GIF, videor och mer – vi har dina minnen skyddade i vilket du format än väljer. Inga begränsningar, bara obegränsade möjligheter.
 
-Innehåller inga annonser eller onödiga behörigheter. Den är helt öppen källkod och ger anpassningsbara färger.
+✨ MATERIAL DESIGN MED DYNAMISKA TEMAN:
+Upplev skönheten med den intuitiva material designen med dynamiska teman. Sugen på mer? Djupdyk i anpassade teman och gör ditt galleri unikt.
 
-Kolla in hela sviten av Simple Tools här:
-https://www.simplemobiletools.com
-
-Facebook:
-https://www.facebook.com/simplemobiletools
-
-Reddit:
-https://www.reddit.com/r/SimpleMobileTools
-
-Telegram:
-https://t.me/SimpleMobileTools
+Hitta fler appar från Fossify: https://www.fossify.org
+Källkod: https://www.github.com/FossifyOrg
+Gå med i vår Reddit-gemenskap: https://www.reddit.com/r/Fossify
+Nå oss på Telegram: https://t.me/Fossify
