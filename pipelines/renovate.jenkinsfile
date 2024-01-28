@@ -14,10 +14,10 @@ pipeline {
                 branch 'update-master'
             }
             steps {
-                sh("git fetch --no-tags --force --progress -- git@github.com:gmasil/Simple-Gallery.git +refs/heads/master:refs/remotes/origin/master")
+                sh("git fetch --no-tags --force --progress -- git@github.com:gmasil/Fossify-Gallery.git +refs/heads/master:refs/remotes/origin/master")
                 sh("git checkout origin/master")
                 sh("git checkout -b master")
-                sh("git fetch --no-tags --force --progress -- git@github.com:FossifyOrg/Gallery.git +refs/heads/master:refs/remotes/upstream/master")
+                sh("git fetch --no-tags --force --progress -- git@github.com:gmasil/Fossify-Gallery.git +refs/heads/master:refs/remotes/upstream/master")
                 sh("git merge upstream/master")
                 sh("git push origin master")
             }
