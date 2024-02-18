@@ -40,7 +40,7 @@ class MediaAdapter(
     MyRecyclerViewAdapter(activity, recyclerView, itemClick), RecyclerViewFastScroller.OnPopupTextUpdate {
 
     private val INSTANT_LOAD_DURATION = 2000L
-    private val IMAGE_LOAD_DELAY = 100L
+    private val IMAGE_LOAD_DELAY = 25L
     private val ITEM_SECTION = 0
     private val ITEM_MEDIUM_VIDEO_PORTRAIT = 1
     private val ITEM_MEDIUM_PHOTO = 2
@@ -670,6 +670,11 @@ class MediaAdapter(
                 else -> ROUNDED_CORNERS_NONE
             }
 
+            activity.loadImage(
+                medium.type, path, mediumThumbnail, scrollHorizontally, animateGifs, cropThumbnails, roundedCorners, medium.getKey(), rotatedImagePaths
+            )
+
+            /*
             if (loadImageInstantly) {
                 activity.loadImage(
                     medium.type, path, mediumThumbnail, scrollHorizontally, animateGifs, cropThumbnails, roundedCorners, medium.getKey(), rotatedImagePaths
@@ -687,6 +692,7 @@ class MediaAdapter(
                     }
                 }, IMAGE_LOAD_DELAY)
             }
+             */
 
             if (isListViewType) {
                 mediumName.setTextColor(textColor)

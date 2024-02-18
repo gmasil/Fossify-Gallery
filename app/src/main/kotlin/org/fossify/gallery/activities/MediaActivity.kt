@@ -15,14 +15,12 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.transition.Transition
-import org.fossify.commons.dialogs.ConfirmationDialog
 import org.fossify.commons.dialogs.CreateNewFolderDialog
 import org.fossify.commons.dialogs.RadioGroupDialog
 import org.fossify.commons.extensions.*
 import org.fossify.commons.helpers.*
 import org.fossify.commons.models.FileDirItem
 import org.fossify.commons.models.RadioItem
-import org.fossify.commons.views.MyGridLayoutManager
 import org.fossify.commons.views.MyRecyclerView
 import org.fossify.gallery.R
 import org.fossify.gallery.adapters.MediaAdapter
@@ -36,6 +34,7 @@ import org.fossify.gallery.interfaces.MediaOperationsListener
 import org.fossify.gallery.models.Medium
 import org.fossify.gallery.models.ThumbnailItem
 import org.fossify.gallery.models.ThumbnailSection
+import org.fossify.gallery.views.PrefetchingGridLayoutManager
 import java.io.File
 import java.io.IOException
 
@@ -679,7 +678,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     }
 
     private fun setupGridLayoutManager() {
-        val layoutManager = binding.mediaGrid.layoutManager as MyGridLayoutManager
+        val layoutManager = binding.mediaGrid.layoutManager as PrefetchingGridLayoutManager
         if (config.scrollHorizontally) {
             layoutManager.orientation = RecyclerView.HORIZONTAL
             binding.mediaRefreshLayout.layoutParams = RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
@@ -702,7 +701,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     }
 
     private fun setupListLayoutManager() {
-        val layoutManager = binding.mediaGrid.layoutManager as MyGridLayoutManager
+        val layoutManager = binding.mediaGrid.layoutManager as PrefetchingGridLayoutManager
         layoutManager.spanCount = 1
         layoutManager.orientation = RecyclerView.VERTICAL
         binding.mediaRefreshLayout.layoutParams = RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -735,7 +734,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     private fun initZoomListener() {
         val viewType = config.getFolderViewType(if (mShowAll) SHOW_ALL else mPath)
         if (viewType == VIEW_TYPE_GRID) {
-            val layoutManager = binding.mediaGrid.layoutManager as MyGridLayoutManager
+            val layoutManager = binding.mediaGrid.layoutManager as PrefetchingGridLayoutManager
             mZoomListener = object : MyRecyclerView.MyZoomListener {
                 override fun zoomIn() {
                     if (layoutManager.spanCount > 1) {
@@ -762,7 +761,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
             items.add(RadioItem(i, resources.getQuantityString(org.fossify.commons.R.plurals.column_counts, i, i)))
         }
 
-        val currentColumnCount = (binding.mediaGrid.layoutManager as MyGridLayoutManager).spanCount
+        val currentColumnCount = (binding.mediaGrid.layoutManager as PrefetchingGridLayoutManager).spanCount
         RadioGroupDialog(this, items, currentColumnCount) {
             val newColumnCount = it as Int
             if (currentColumnCount != newColumnCount) {
@@ -783,7 +782,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     }
 
     private fun columnCountChanged() {
-        (binding.mediaGrid.layoutManager as MyGridLayoutManager).spanCount = config.mediaColumnCnt
+        (binding.mediaGrid.layoutManager as PrefetchingGridLayoutManager).spanCount = config.mediaColumnCnt
         handleGridSpacing()
         refreshMenuItems()
         getMediaAdapter()?.apply {

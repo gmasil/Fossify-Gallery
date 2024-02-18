@@ -12,6 +12,7 @@ import android.media.AudioManager
 import android.os.Process
 import android.provider.MediaStore.Files
 import android.provider.MediaStore.Images
+import android.util.Log
 import android.widget.ImageView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.Priority
@@ -24,6 +25,7 @@ import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.MultiTransformation
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.engine.cache.InternalCacheDiskCacheFactory
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.load.resource.bitmap.FitCenter
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
@@ -475,12 +477,14 @@ fun Context.loadImage(
     type: Int, path: String, target: MySquareImageView, horizontalScroll: Boolean, animateGifs: Boolean, cropThumbnails: Boolean,
     roundCorners: Int, signature: ObjectKey, skipMemoryCacheAtPaths: ArrayList<String>? = null
 ) {
+    Log.i("loading", "Loading image $path")
     target.isHorizontalScrolling = horizontalScroll
+    val crossFadeDuration: Int = 0
     if (type == TYPE_SVGS) {
-        loadSVG(path, target, cropThumbnails, roundCorners, signature)
+        loadSVG(path, target, cropThumbnails, roundCorners, signature, crossFadeDuration)
     } else {
         val tryLoadingWithPicasso = type == TYPE_IMAGES && path.isPng()
-        loadImageBase(path, target, cropThumbnails, roundCorners, signature, skipMemoryCacheAtPaths, animateGifs, tryLoadingWithPicasso)
+        loadImageBase(path, target, cropThumbnails, roundCorners, signature, skipMemoryCacheAtPaths, animateGifs, tryLoadingWithPicasso, crossFadeDuration)
     }
 }
 
@@ -516,29 +520,31 @@ fun Context.loadImageBase(
     tryLoadingWithPicasso: Boolean = false,
     crossFadeDuration: Int = 300
 ) {
-    val options = RequestOptions()
-        .signature(signature)
-        .skipMemoryCache(skipMemoryCacheAtPaths?.contains(path) == true)
-        .priority(Priority.LOW)
-        .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
-        .format(DecodeFormat.PREFER_ARGB_8888)
+    var options = RequestOptions()
+        //.signature(signature)
+        //.skipMemoryCache(skipMemoryCacheAtPaths?.contains(path) == true)
+        //.priority(Priority.LOW)
+        .diskCacheStrategy(DiskCacheStrategy.ALL)
+        //.format(DecodeFormat.PREFER_ARGB_8888)
+        //.onlyRetrieveFromCache(true)
+        .override(250, 250)
 
     if (cropThumbnails) {
-        options.optionalTransform(CenterCrop())
-        options.optionalTransform(WebpDrawable::class.java, WebpDrawableTransformation(CenterCrop()))
+        options = options.optionalTransform(CenterCrop())
+        options = options.optionalTransform(WebpDrawable::class.java, WebpDrawableTransformation(CenterCrop()))
     } else {
-        options.optionalTransform(FitCenter())
-        options.optionalTransform(WebpDrawable::class.java, WebpDrawableTransformation(FitCenter()))
+        options = options.optionalTransform(FitCenter())
+        options = options.optionalTransform(WebpDrawable::class.java, WebpDrawableTransformation(FitCenter()))
     }
 
     // animation is only supported without rounded corners
     if (animate && roundCorners == ROUNDED_CORNERS_NONE) {
         // this is required to make glide cache aware of changes
-        options.decode(Drawable::class.java)
+        options = options.decode(Drawable::class.java)
     } else {
-        options.dontAnimate()
+        options = options.dontAnimate()
         // don't animate is not enough for webp files, decode as bitmap forces first frame use in animated webps
-        options.decode(Bitmap::class.java)
+        options = options.decode(Bitmap::class.java)
     }
 
     if (roundCorners != ROUNDED_CORNERS_NONE) {
@@ -546,8 +552,8 @@ fun Context.loadImageBase(
             if (roundCorners == ROUNDED_CORNERS_SMALL) org.fossify.commons.R.dimen.rounded_corner_radius_small else org.fossify.commons.R.dimen.rounded_corner_radius_big
         val cornerRadius = resources.getDimension(cornerSize).toInt()
         val roundedCornersTransform = RoundedCorners(cornerRadius)
-        options.optionalTransform(MultiTransformation(CenterCrop(), roundedCornersTransform))
-        options.optionalTransform(
+        options = options.optionalTransform(MultiTransformation(CenterCrop(), roundedCornersTransform))
+        options = options.optionalTransform(
             WebpDrawable::class.java,
             MultiTransformation(WebpDrawableTransformation(CenterCrop()), WebpDrawableTransformation(roundedCornersTransform))
         )
@@ -582,16 +588,18 @@ fun Context.loadImageBase(
     builder.into(target)
 }
 
-fun Context.loadSVG(path: String, target: MySquareImageView, cropThumbnails: Boolean, roundCorners: Int, signature: ObjectKey) {
+fun Context.loadSVG(path: String, target: MySquareImageView, cropThumbnails: Boolean, roundCorners: Int, signature: ObjectKey, crossFadeDuration: Int = 300) {
     target.scaleType = if (cropThumbnails) ImageView.ScaleType.CENTER_CROP else ImageView.ScaleType.FIT_CENTER
 
-    val options = RequestOptions().signature(signature)
+    val options = RequestOptions()
+        .signature(signature)
+        .override(200, 200)
     var builder = Glide.with(applicationContext)
         .`as`(PictureDrawable::class.java)
         .listener(SvgSoftwareLayerSetter())
         .load(path)
         .apply(options)
-        .transition(DrawableTransitionOptions.withCrossFade())
+        .transition(DrawableTransitionOptions.withCrossFade(crossFadeDuration))
 
     if (roundCorners != ROUNDED_CORNERS_NONE) {
         val cornerSize =

@@ -59,7 +59,7 @@
                     android:layout_height="match_parent"
                     android:layoutAnimation="@anim/layout_animation"
                     android:scrollbars="none"
-                    app:layoutManager="org.fossify.commons.views.MyGridLayoutManager"
+                    app:layoutManager="org.fossify.gallery.views.PrefetchingGridLayoutManager"
                     app:spanCount="@integer/media_columns_vertical_scroll" />
 
             </com.qtalk.recyclerviewfastscroller.RecyclerViewFastScroller>
