@@ -123,6 +123,22 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getStringSet(EXCLUDED_FOLDERS, HashSet())!!
         set(excludedFolders) = prefs.edit().remove(EXCLUDED_FOLDERS).putStringSet(EXCLUDED_FOLDERS, excludedFolders).apply()
 
+    var prioritizedFolders: MutableSet<String>
+        get() = prefs.getStringSet(PRIORITIZED_FOLDERS, HashSet())!!
+        set(prioritizedFolders) = prefs.edit().remove(PRIORITIZED_FOLDERS).putStringSet(PRIORITIZED_FOLDERS, prioritizedFolders).apply()
+
+    fun addPrioritizedFolder(value: String) {
+        val currPrioritizedFolders = HashSet<String>(prioritizedFolders)
+        currPrioritizedFolders.add(value)
+        prioritizedFolders = currPrioritizedFolders
+    }
+
+    fun removePrioritizedFolder(value: String) {
+        val currPrioritizedFolders = HashSet<String>(prioritizedFolders)
+        currPrioritizedFolders.remove(value)
+        prioritizedFolders = currPrioritizedFolders
+    }
+
     var isExcludedPasswordProtectionOn: Boolean
         get() = prefs.getBoolean(EXCLUDED_PASSWORD_PROTECTION, false)
         set(isExcludedPasswordProtectionOn) = prefs.edit().putBoolean(EXCLUDED_PASSWORD_PROTECTION, isExcludedPasswordProtectionOn).apply()

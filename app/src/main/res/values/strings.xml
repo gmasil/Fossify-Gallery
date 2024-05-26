@@ -228,6 +228,16 @@
     <string name="search_all_files">Search all files instead of folders on the main screen</string>
     <string name="show_all_folders">Show a menu button for toggling Show All Folders Content quickly</string>
 
+    <string name="manage_prioritized_folders">Manage prioritized folders</string>
+    <string name="prioritized_folders">Prioritized folders</string>
+    <string name="prioritized_folders_desc">Use prioritized folders to automatically show them before or after all other folders. Select folders containing a given text. Default priority is 5. Use priorities 1 to 4 to increase priority, use 6 to 10 to decrease priority.</string>
+    <string name="priority">Priority</string>
+    <string name="folder_name_contains">Contains</string>
+    <string name="folder_name_contains_empty">Contains cannot be empty</string>
+    <string name="priority_empty">Priority cannot be empty</string>
+    <string name="priority_int">Priority must be an integer</string>
+    <string name="priority_range">Priority must be between 1 and 10</string>
+
     <!-- Setting sections -->
     <string name="thumbnails">Thumbnails</string>
     <string name="fullscreen_media">Fullscreen media</string>

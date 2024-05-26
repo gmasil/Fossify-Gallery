@@ -57,6 +57,7 @@ class SettingsActivity : SimpleActivity() {
         setupFileLoadingPriority()
         setupManageIncludedFolders()
         setupManageExcludedFolders()
+        setupManagePrioritizedFolders()
         setupManageHiddenFolders()
         setupSearchAllFiles()
         setupShowHiddenItems()
@@ -216,6 +217,12 @@ class SettingsActivity : SimpleActivity() {
             handleExcludedFolderPasswordProtection {
                 startActivity(Intent(this, ExcludedFoldersActivity::class.java))
             }
+        }
+    }
+
+    private fun setupManagePrioritizedFolders() {
+        binding.settingsManagePrioritizedFoldersHolder.setOnClickListener {
+            startActivity(Intent(this, PrioritizedFoldersActivity::class.java))
         }
     }
 

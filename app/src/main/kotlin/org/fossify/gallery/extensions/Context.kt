@@ -123,24 +123,23 @@ fun Context.getSortedDirectories(source: ArrayList<Directory>): ArrayList<Direct
             }
         }
 
-        dirs.mapTo(newDirsOrdered, { it })
+        dirs.mapTo(newDirsOrdered) { it }
         return newDirsOrdered
     }
 
     dirs.sortWith(Comparator { o1, o2 ->
         o1 as Directory
         o2 as Directory
+        listOf(o1, o2).forEach {
+            it.apply {
+                if (sortValue.isEmpty()) {
+                    sortValue = getDirectorySortingValue(path, name, size)
+                }
+            }
+        }
 
         var result = when {
             sorting and SORT_BY_NAME != 0 -> {
-                if (o1.sortValue.isEmpty()) {
-                    o1.sortValue = o1.name.lowercase(Locale.getDefault())
-                }
-
-                if (o2.sortValue.isEmpty()) {
-                    o2.sortValue = o2.name.lowercase(Locale.getDefault())
-                }
-
                 if (sorting and SORT_USE_NUMERIC_VALUE != 0) {
                     AlphanumericComparator().compare(
                         o1.sortValue.normalizeString().lowercase(Locale.getDefault()),
@@ -152,25 +151,12 @@ fun Context.getSortedDirectories(source: ArrayList<Directory>): ArrayList<Direct
             }
 
             sorting and SORT_BY_PATH != 0 -> {
-                if (o1.sortValue.isEmpty()) {
-                    o1.sortValue = o1.path.lowercase(Locale.getDefault())
-                }
-
-                if (o2.sortValue.isEmpty()) {
-                    o2.sortValue = o2.path.lowercase(Locale.getDefault())
-                }
-
                 if (sorting and SORT_USE_NUMERIC_VALUE != 0) {
                     AlphanumericComparator().compare(o1.sortValue.lowercase(Locale.getDefault()), o2.sortValue.lowercase(Locale.getDefault()))
                 } else {
                     o1.sortValue.lowercase(Locale.getDefault()).compareTo(o2.sortValue.lowercase(Locale.getDefault()))
                 }
             }
-
-            sorting and SORT_BY_PATH != 0 -> AlphanumericComparator().compare(
-                o1.sortValue.lowercase(Locale.getDefault()),
-                o2.sortValue.lowercase(Locale.getDefault())
-            )
 
             sorting and SORT_BY_SIZE != 0 -> (o1.sortValue.toLongOrNull() ?: 0).compareTo(o2.sortValue.toLongOrNull() ?: 0)
             sorting and SORT_BY_DATE_MODIFIED != 0 -> (o1.sortValue.toLongOrNull() ?: 0).compareTo(o2.sortValue.toLongOrNull() ?: 0)
@@ -1117,10 +1103,31 @@ fun Context.createDirectoryFromMedia(
     return Directory(null, path, thumbnail!!, dirName, curMedia.size, lastModified, dateTaken, size, getPathLocation(path), mediaTypes, sortValue)
 }
 
+fun Context.getDirectorySortingValue(path: String, name: String, size: Long): String {
+    val media = getMediaFromDirectoryPath(path)
+    return getDirectorySortingValue(media, path, name, size)
+}
+
 fun Context.getDirectorySortingValue(media: ArrayList<Medium>, path: String, name: String, size: Long): String {
     val sorting = config.directorySorting
     val sorted = when {
-        sorting and SORT_BY_NAME != 0 -> return name
+        sorting and SORT_BY_NAME != 0 -> {
+            if(config.prioritizedFolders.isNotEmpty()){
+                config.prioritizedFolders.forEach {
+                    val priorityString = it.split(":")[0]
+                    val pattern = it.substring(priorityString.length+1)
+                    if(name.contains(pattern)){
+                        val priority = priorityString.toInt()-1
+                        val prefix: Char = 'A' + priority
+                        return "$prefix $name"
+                    }
+                }
+                return "E $name"
+            } else {
+                return name
+            }
+        }
+
         sorting and SORT_BY_PATH != 0 -> return path
         sorting and SORT_BY_SIZE != 0 -> return size.toString()
         sorting and SORT_BY_DATE_MODIFIED != 0 -> media.sortedBy { it.modified }
@@ -1143,15 +1150,10 @@ fun Context.getDirectorySortingValue(media: ArrayList<Medium>, path: String, nam
     return result.toString()
 }
 
-fun Context.updateDirectoryPath(path: String) {
+fun Context.getMediaFromDirectoryPath(path: String): ArrayList<Medium> {
     val mediaFetcher = MediaFetcher(applicationContext)
     val getImagesOnly = false
     val getVideosOnly = false
-    val hiddenString = getString(R.string.hidden)
-    val albumCovers = config.parseAlbumCovers()
-    val includedFolders = config.includedFolders
-    val noMediaFolders = getNoMediaFoldersSync()
-
     val sorting = config.getFolderSorting(path)
     val grouping = config.getFolderGrouping(path)
     val getProperDateTaken = config.directorySorting and SORT_BY_DATE_TAKEN != 0 ||
@@ -1169,10 +1171,21 @@ fun Context.updateDirectoryPath(path: String) {
     val lastModifieds = if (getProperLastModified) mediaFetcher.getFolderLastModifieds(path) else HashMap()
     val dateTakens = mediaFetcher.getFolderDateTakens(path)
     val favoritePaths = getFavoritePaths()
-    val curMedia = mediaFetcher.getFilesFrom(
+    return mediaFetcher.getFilesFrom(
         path, getImagesOnly, getVideosOnly, getProperDateTaken, getProperLastModified, getProperFileSize,
         favoritePaths, false, lastModifieds, dateTakens, null
     )
+}
+
+fun Context.updateDirectoryPath(path: String) {
+    val hiddenString = getString(R.string.hidden)
+    val albumCovers = config.parseAlbumCovers()
+    val includedFolders = config.includedFolders
+    val noMediaFolders = getNoMediaFoldersSync()
+
+    val getProperFileSize = config.directorySorting and SORT_BY_SIZE != 0
+
+    val curMedia = getMediaFromDirectoryPath(path);
     val directory = createDirectoryFromMedia(path, curMedia, albumCovers, hiddenString, includedFolders, getProperFileSize, noMediaFolders)
     updateDBDirectory(directory)
 }
