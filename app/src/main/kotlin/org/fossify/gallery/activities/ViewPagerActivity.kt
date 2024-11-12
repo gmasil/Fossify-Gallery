@@ -855,7 +855,9 @@ class ViewPagerActivity : SimpleActivity(), ViewPager.OnPageChangeListener, View
         }
 
         binding.bottomActions.bottomShare.beVisibleIf(visibleBottomActions and BOTTOM_ACTION_SHARE != 0)
-        binding.bottomActions.bottomShare.setOnLongClickListener { toast(org.fossify.commons.R.string.share); true }
+        binding.bottomActions.bottomShare.setOnLongClickListener {
+            shareMediumPathDirect(getCurrentPath()); true
+        }
         binding.bottomActions.bottomShare.setOnClickListener {
             shareMediumPath(getCurrentPath())
         }

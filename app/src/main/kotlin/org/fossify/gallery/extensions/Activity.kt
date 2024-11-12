@@ -53,14 +53,12 @@ import java.util.Locale
 
 fun Activity.sharePath(path: String) {
     ensureBackgroundThread {
-        if (path.lowercase().endsWith(".webp") || path.lowercase().endsWith(".gif")) {
-            try {
-                sharePathIntent(AnimatedImageConverter(this).convertAnimatedImage(path).absolutePath, BuildConfig.APPLICATION_ID)
-                return@ensureBackgroundThread
-            } catch (e: Exception) {
-                toast("${e.message}, sharing original...")
-                e.printStackTrace()
-            }
+        try {
+            sharePathIntent(AnimatedImageConverter(this).convertAnimatedImage(path).absolutePath, BuildConfig.APPLICATION_ID)
+            return@ensureBackgroundThread
+        } catch (e: Exception) {
+            toast("${e.message}, sharing original...")
+            e.printStackTrace()
         }
         sharePathIntent(path, BuildConfig.APPLICATION_ID)
     }
@@ -68,6 +66,10 @@ fun Activity.sharePath(path: String) {
 
 fun Activity.sharePaths(paths: ArrayList<String>) {
     sharePathsIntent(paths, BuildConfig.APPLICATION_ID)
+}
+
+fun Activity.shareMediumPathDirect(path: String) {
+    sharePathIntent(path, BuildConfig.APPLICATION_ID)
 }
 
 fun Activity.shareMediumPath(path: String) {
