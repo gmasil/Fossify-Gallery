@@ -24,8 +24,10 @@ class AnimatedImageConverter(val applicationContext: Context) {
         if (filePath.lowercase().endsWith(".webp")) {
             return convertWebpToGif(filePath)
         } else if(filePath.lowercase().endsWith(".mp4")) {
+            applicationContext.toast("Converting to gif...")
             return convertVideoToGif(filePath)
         } else if(filePath.lowercase().endsWith(".webm")) {
+            applicationContext.toast("Converting to gif...")
             return convertVideoToGif(filePath)
         } else {
             return File(filePath)
