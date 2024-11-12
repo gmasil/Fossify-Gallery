@@ -65,13 +65,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_use_english_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_use_english"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/use_english_language" />
@@ -201,13 +201,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_show_hidden_items_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_show_hidden_items"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/show_hidden_items" />
@@ -216,13 +216,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_search_all_files_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_search_all_files"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/search_all_files" />
@@ -242,13 +242,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_autoplay_videos_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_autoplay_videos"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/autoplay_videos" />
@@ -257,13 +257,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_remember_last_video_position_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_remember_last_video_position"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/remember_last_video_position" />
@@ -272,13 +272,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_loop_videos_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_loop_videos"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/loop_videos" />
@@ -287,13 +287,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_open_videos_on_separate_screen_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_open_videos_on_separate_screen"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/open_videos_on_separate_screen" />
@@ -302,13 +302,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_allow_video_gestures_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_allow_video_gestures"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/allow_video_gestures" />
@@ -328,13 +328,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_crop_thumbnails_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_crop_thumbnails"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/crop_thumbnails" />
@@ -343,13 +343,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_animate_gifs_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_animate_gifs"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/animate_gifs" />
@@ -407,13 +407,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_scroll_horizontally_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_scroll_horizontally"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/scroll_thumbnails_horizontally" />
@@ -422,13 +422,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_enable_pull_to_refresh_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_enable_pull_to_refresh"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/enable_pull_to_refresh" />
@@ -448,13 +448,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_max_brightness_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_max_brightness"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/max_brightness" />
@@ -463,13 +463,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_black_background_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_black_background"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/black_background_at_fullscreen" />
@@ -478,13 +478,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_hide_system_ui_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_hide_system_ui"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/hide_system_ui_at_fullscreen" />
@@ -493,13 +493,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_allow_instant_change_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_allow_instant_change"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/allow_instant_change" />
@@ -508,13 +508,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_allow_photo_gestures_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_allow_photo_gestures"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/allow_photo_gestures" />
@@ -523,13 +523,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_allow_down_gesture_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_allow_down_gesture"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/allow_down_gesture" />
@@ -538,13 +538,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_show_notch_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_show_notch"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/show_notch" />
@@ -587,13 +587,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_allow_zooming_images_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_allow_zooming_images"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/allow_deep_zooming_images" />
@@ -602,13 +602,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_allow_rotating_with_gestures_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_allow_rotating_with_gestures"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/allow_rotating_gestures" />
@@ -617,13 +617,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_show_highest_quality_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_show_highest_quality"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/show_highest_quality" />
@@ -632,13 +632,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_allow_one_to_one_zoom_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_allow_one_to_one_zoom"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/allow_one_to_one_zoom" />
@@ -658,13 +658,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_show_extended_details_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_show_extended_details"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/show_extended_details" />
@@ -673,13 +673,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_hide_extended_details_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_hide_extended_details"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/hide_extended_details" />
@@ -714,13 +714,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_app_password_protection_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_app_password_protection"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/password_protect_whole_app" />
@@ -729,13 +729,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_hidden_item_password_protection_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_hidden_item_password_protection"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/password_protect_hidden_items" />
@@ -744,13 +744,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_excluded_item_password_protection_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_excluded_item_password_protection"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/password_protect_excluded" />
@@ -759,13 +759,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_file_deletion_password_protection_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_file_deletion_password_protection"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/password_protect_file_deletion" />
@@ -785,13 +785,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_delete_empty_folders_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_delete_empty_folders"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/delete_empty_folders" />
@@ -800,13 +800,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_keep_last_modified_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_keep_last_modified"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/keep_last_modified" />
@@ -815,13 +815,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_skip_delete_confirmation_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_skip_delete_confirmation"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/skip_delete_confirmation" />
@@ -841,13 +841,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_bottom_actions_checkbox_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_bottom_actions_checkbox"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/show_at_bottom" />
@@ -882,13 +882,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_use_recycle_bin_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_use_recycle_bin"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/move_items_into_recycle_bin" />
@@ -897,13 +897,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_show_recycle_bin_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_show_recycle_bin"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/show_recycle_bin" />
@@ -912,13 +912,13 @@
 
             <RelativeLayout
                 android:id="@+id/settings_show_recycle_bin_last_holder"
-                style="@style/SettingsHolderCheckboxStyle"
+                style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <org.fossify.commons.views.MyAppCompatCheckbox
+                <org.fossify.commons.views.MyMaterialSwitch
                     android:id="@+id/settings_show_recycle_bin_last"
-                    style="@style/SettingsCheckboxStyle"
+                    style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/show_recycle_bin_last" />

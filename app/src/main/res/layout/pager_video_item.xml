@@ -43,6 +43,10 @@
         android:padding="20dp"
         android:src="@drawable/ic_play_outline_vector" />
 
+    <include
+        android:id="@+id/error_message_holder"
+        layout="@layout/layout_media_load_error" />
+
     <ImageView
         android:id="@+id/panorama_outline"
         android:layout_width="@dimen/play_outline_size_big"
@@ -57,14 +61,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
-        android:layout_marginLeft="@dimen/small_margin"
-        android:layout_marginRight="@dimen/small_margin"
+        android:layout_marginHorizontal="@dimen/medium_margin"
         android:background="@drawable/extended_details_background"
-        android:padding="@dimen/small_margin"
+        android:padding="@dimen/medium_margin"
         android:textColor="@color/theme_dark_text_color"
         android:textSize="@dimen/smaller_text_size"
         android:visibility="gone"
-        tools:text="My video\nAnother line" />
+        tools:text="Big buck bunny.mp4\n948.52 MB\n1920 x 1080 (2.1MP)\n10 April 2008, 08:30 AM"
+        tools:visibility="visible" />
 
     <include
         android:id="@+id/bottom_video_time_holder"
@@ -74,9 +78,9 @@
         android:id="@+id/slide_info"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
+        android:layout_above="@id/bottom_video_time_holder"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="120dp"
+        android:layout_marginBottom="@dimen/big_margin"
         android:alpha="0"
         android:background="@drawable/black_rounded_background"
         android:gravity="center"

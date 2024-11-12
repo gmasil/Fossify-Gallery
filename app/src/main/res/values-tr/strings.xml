@@ -251,4 +251,10 @@
     <string name="faq_17_text">Bu, Android 11 ile birlikte gelen sistem değişiklikleri nedeniyle çalışmayı durdurdu, uygulama artık gerçek klasörlere göz atamıyor, verileri almak için MediaStore kullanıyor.</string>
     <string name="faq_18_title">Video oynatılırken neden reklam görüyorum\?</string>
     <string name="faq_18_text">Uygulamalarımızda hiçbir şekilde reklam yoktur. Video oynatılırken reklam görüyorsanız, başka bir uygulamanın video oynatıcısını kullanıyor olmalısınız. Aygıt ayarlarında öntanımlı video oynatıcınızı bulmayı deneyin, ardından \"Öntanımlıları temizle\" yapın. Bir dahaki sefere video oynatmayı istediğinizde, kullanmak istediğiniz uygulamayı seçebileceğiniz bir uygulama seçici istemi göreceksiniz.</string>
+    <string name="full_storage_permission_required">Fossify Galeri tüm fotoğraf ve videolarınızı görüntülemek için tam erişime ihtiyaç duyar. Ayarlar &gt; İzinler &gt; Fotoğraf ve videolar &gt; Tümüne izin ver bölümüne gidin.</string>
+    <string name="playback_speed">Oynatma hızı</string>
+    <string name="failed_to_load_media">Medya yüklenemedi.</string>
+    <string name="file_is_malformed_or_corrupted">Dosya hatalı biçimlendirilmiş veya bozuk.</string>
+    <string name="media_exceeds_device_capabilities">Medya aygıt kapasitesini aşıyor.</string>
+    <string name="unsupported_format">Desteklenmeyen biçim.</string>
 </resources>

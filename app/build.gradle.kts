@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.detekt)
 }
 
 val keystorePropertiesFile: File = rootProject.file("keystore.properties")
@@ -70,7 +71,7 @@ android {
     }
 
     compileOptions {
-        val currentJavaVersionFromLibs = JavaVersion.valueOf(libs.versions.app.build.javaVersion.get().toString())
+        val currentJavaVersionFromLibs = JavaVersion.valueOf(libs.versions.app.build.javaVersion.get())
         sourceCompatibility = currentJavaVersionFromLibs
         targetCompatibility = currentJavaVersionFromLibs
     }
@@ -87,7 +88,9 @@ android {
 
     lint {
         checkReleaseBuilds = false
-        abortOnError = false
+        abortOnError = true
+        warningsAsErrors = true
+        baseline = file("lint-baseline.xml")
     }
 
     packaging {
@@ -95,6 +98,17 @@ android {
             excludes += "META-INF/library_release.kotlin_module"
         }
     }
+
+    bundle {
+        language {
+            @Suppress("UnstableApiUsage")
+            enableSplit = false
+        }
+    }
+}
+
+detekt {
+    baseline = file("detekt-baseline.xml")
 }
 
 dependencies {
@@ -105,7 +119,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.sanselan)
-    implementation(libs.imagefilters)
+    implementation(libs.androidphotofilters)
     implementation(libs.androidsvg.aar)
     implementation(libs.gestureviews)
     implementation(libs.subsamplingscaleimageview)
@@ -113,6 +127,7 @@ dependencies {
     implementation(libs.awebp)
     implementation(libs.apng)
     implementation(libs.avif.integration)
+    implementation(libs.jxl.integration)
     implementation(libs.okio)
     implementation(libs.picasso) {
         exclude(group = "com.squareup.okhttp3", module = "okhttp")

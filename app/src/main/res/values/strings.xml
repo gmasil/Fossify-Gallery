@@ -33,6 +33,7 @@
     <string name="reorder_by_dragging">Reorder folders by dragging</string>
     <string name="reorder_by_dragging_pro">Reorder folders by dragging (Pro)</string>
     <string name="restore_to_path">Restoring to \'%s\'</string>
+    <string name="full_storage_permission_required">Fossify Gallery needs full access to display all your photos and videos. Go to Settings > Permissions > Photos and videos > Allow all.</string>
 
     <!-- Filter -->
     <string name="filter_media">Filter media</string>
@@ -181,6 +182,7 @@
     <string name="delete_empty_folders">Delete empty folders after deleting their content</string>
     <string name="allow_photo_gestures">Allow controlling photo brightness with vertical gestures</string>
     <string name="allow_video_gestures">Allow controlling video volume and brightness with vertical gestures</string>
+    <string name="playback_speed">Playback speed</string>
     <string name="show_media_count">Show folder media count on the main view</string>
     <string name="show_extended_details">Show extended details over fullscreen media</string>
     <string name="manage_extended_details">Manage extended details</string>
@@ -248,6 +250,12 @@
     <string name="manage_bottom_actions">Manage visible bottom actions</string>
     <string name="toggle_favorite">Toggle favorite</string>
     <string name="toggle_file_visibility">Toggle file visibility</string>
+
+    <!-- Errors -->
+    <string name="failed_to_load_media">Failed to load media.</string>
+    <string name="file_is_malformed_or_corrupted">File is malformed or corrupted.</string>
+    <string name="media_exceeds_device_capabilities">Media exceeds device capabilities.</string>
+    <string name="unsupported_format">Unsupported format.</string>
 
     <!-- FAQ -->
     <string name="faq_1_title">How can I make Fossify Gallery the default device gallery?</string>
