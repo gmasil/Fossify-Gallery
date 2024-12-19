@@ -8,6 +8,7 @@ import com.arthenica.ffmpegkit.FFmpegSession
 import com.arthenica.ffmpegkit.ReturnCode
 import org.fossify.commons.extensions.toast
 import de.gmasil.converter.api.AnimatedImageHandler
+import de.gmasil.converter.impl.GifImageHandler
 import de.gmasil.converter.impl.WebpImageHandler
 import java.io.File
 import java.io.FileOutputStream
@@ -109,7 +110,7 @@ class AnimatedImageConverter(val applicationContext: Context) {
         val inventoryFile = File(folder, "input.txt")
         inventoryFile.writeText(inventory.toString())
         // convert video
-        val ffmpegCommand = "-r $inputFramerate -f concat -safe 0 -i ${inventoryFile.absolutePath} -r $outputFramerate -vcodec libx264 -crf 24 -preset slow -vf \"fps=${outputFramerate},pad=ceil(iw/2)*2:ceil(ih/2)*2\" -movflags +faststart $targetFile"
+        val ffmpegCommand = "-r $inputFramerate -f concat -safe 0 -i ${inventoryFile.absolutePath} -r $outputFramerate -vcodec libx264 -pix_fmt yuv420p -crf 24 -preset slow -vf \"fps=${outputFramerate},pad=ceil(iw/2)*2:ceil(ih/2)*2\" -movflags +faststart $targetFile"
         Log.i(NAME, "ffmpeg $ffmpegCommand")
         val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
         return ReturnCode.isSuccess(session.returnCode)
@@ -133,6 +134,41 @@ class AnimatedImageConverter(val applicationContext: Context) {
             return File(targetFile)
         } else {
             throw IllegalStateException("Error while converting to gif")
+        }
+    }
+
+    fun convertAnimatedImageToVideo(filePath: String): File {
+        // select image type
+        var imageHandler: AnimatedImageHandler
+        if (filePath.lowercase().endsWith(".webp")) {
+            imageHandler = WebpImageHandler(filePath, applicationContext)
+        } else if(filePath.lowercase().endsWith(".gif")) {
+            imageHandler = GifImageHandler(filePath, applicationContext)
+        } else {
+            throw IllegalArgumentException("Given file '$filePath' is not a supported animated image type")
+        }
+        val targetFolder = applicationContext.cacheDir.resolve("converter").absolutePath
+        val frameCount = imageHandler.countFrames()
+        if (frameCount > 1) {
+            // animated
+            applicationContext.toast("Converting to video...")
+            Log.i(NAME, "Extracting frames from '$filePath'...")
+            val totalDelay = extractImages(imageHandler, targetFolder)
+            Log.i(NAME, "Total delay: $totalDelay, frames: $frameCount")
+            val targetFile = "${targetFolder}/output.mp4"
+            if (createVideoFromImagesInFolder(targetFolder, targetFile, totalDelay, frameCount)) {
+                Log.i(NAME, "ffmpeg finished successfully")
+                return File(targetFile)
+            } else {
+                throw IllegalStateException("Error while converting to video")
+            }
+        } else if (frameCount == 1) {
+            // not animated
+            extractImages(imageHandler, targetFolder)
+            // return the only extracted image as png
+            return File("$targetFolder/${"0".padStart(FILE_PADDING, '0')}.png")
+        } else {
+            throw IllegalStateException("File is corrupt")
         }
     }
 }

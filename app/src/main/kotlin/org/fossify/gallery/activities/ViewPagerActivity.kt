@@ -32,6 +32,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
+import de.gmasil.converter.AnimatedImageConverter
 import org.fossify.commons.dialogs.PropertiesDialog
 import org.fossify.commons.dialogs.RenameItemDialog
 import org.fossify.commons.extensions.*
@@ -840,7 +841,20 @@ class ViewPagerActivity : SimpleActivity(), ViewPager.OnPageChangeListener, View
         }
 
         binding.bottomActions.bottomEdit.beVisibleIf(visibleBottomActions and BOTTOM_ACTION_EDIT != 0 && currentMedium?.isSVG() == false)
-        binding.bottomActions.bottomEdit.setOnLongClickListener { toast(R.string.edit); true }
+        binding.bottomActions.bottomEdit.setOnLongClickListener {
+            if(getCurrentPath().lowercase().endsWith(".gif")) {
+                ensureBackgroundThread {
+                    var file = AnimatedImageConverter(applicationContext).convertAnimatedImageToVideo(getCurrentPath())
+                    var targetFile = getCurrentPath().substring(0, getCurrentPath().lastIndexOf(".")) + ".mp4"
+                    file.copyTo(File(targetFile))
+                    file.delete()
+                    toast("Video conversion finished")
+                }
+            } else {
+                toast(R.string.edit)
+            }
+            true
+        }
         binding.bottomActions.bottomEdit.setOnClickListener {
             openEditor(getCurrentPath())
         }
