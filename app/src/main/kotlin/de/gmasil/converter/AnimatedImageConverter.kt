@@ -171,4 +171,20 @@ class AnimatedImageConverter(val applicationContext: Context) {
             throw IllegalStateException("File is corrupt")
         }
     }
+
+    fun convertGifToVideoInSameFolder(filePath: String) {
+        applicationContext.toast("Converting to video...")
+        var targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+        val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx264 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
+        Log.i(NAME, "ffmpeg $ffmpegCommand")
+        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
+        if(ReturnCode.isSuccess(session.returnCode)) {
+            applicationContext.toast("Video conversion finished")
+        } else {
+            if (File(targetFile).exists()) {
+                File(targetFile).delete()
+            }
+            applicationContext.toast("Video conversion failed")
+        }
+    }
 }

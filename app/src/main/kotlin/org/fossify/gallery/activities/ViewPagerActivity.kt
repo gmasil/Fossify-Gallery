@@ -844,11 +844,7 @@ class ViewPagerActivity : SimpleActivity(), ViewPager.OnPageChangeListener, View
         binding.bottomActions.bottomEdit.setOnLongClickListener {
             if(getCurrentPath().lowercase().endsWith(".gif")) {
                 ensureBackgroundThread {
-                    var file = AnimatedImageConverter(applicationContext).convertAnimatedImageToVideo(getCurrentPath())
-                    var targetFile = getCurrentPath().substring(0, getCurrentPath().lastIndexOf(".")) + ".mp4"
-                    file.copyTo(File(targetFile))
-                    file.delete()
-                    toast("Video conversion finished")
+                    AnimatedImageConverter(applicationContext).convertGifToVideoInSameFolder(getCurrentPath())
                 }
             } else {
                 toast(R.string.edit)
