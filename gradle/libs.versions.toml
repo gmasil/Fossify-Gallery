@@ -32,7 +32,7 @@ media3Exoplayer = "1.4.1"
 okhttp = "4.12.0"
 okio = "3.6.0"
 picasso = "2.71828"
-ffmpeg = "5.1"
+ffmpeg = "6.0-2"
 subsamplingScaleImageView = "d705c3c4ad"
 #build
 app-build-compileSDKVersion = "34"
