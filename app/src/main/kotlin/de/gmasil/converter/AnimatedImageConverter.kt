@@ -2,17 +2,19 @@ package de.gmasil.converter
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegSession
 import com.arthenica.ffmpegkit.ReturnCode
-import org.fossify.commons.extensions.toast
 import de.gmasil.converter.api.AnimatedImageHandler
 import de.gmasil.converter.impl.GifImageHandler
 import de.gmasil.converter.impl.WebpImageHandler
+import org.fossify.commons.extensions.toast
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+
 
 class AnimatedImageConverter(val applicationContext: Context) {
 
@@ -21,7 +23,7 @@ class AnimatedImageConverter(val applicationContext: Context) {
         const val NAME = "AnimatedImageConverter"
     }
 
-    fun convertAnimatedImage(filePath: String): File {
+    fun handleMediaForSharing(filePath: String): File {
         if (filePath.lowercase().endsWith(".webp")) {
             return convertWebpToGif(filePath)
         } else if(filePath.lowercase().endsWith(".mp4")) {
@@ -30,9 +32,32 @@ class AnimatedImageConverter(val applicationContext: Context) {
         } else if(filePath.lowercase().endsWith(".webm")) {
             applicationContext.toast("Converting to gif...")
             return convertVideoToGif(filePath)
+        } else if(isNormalImageFile(filePath)) {
+            return ensureSharableFileSize(filePath)
         } else {
             return File(filePath)
         }
+    }
+
+    private fun ensureSharableFileSize(filePath: String): File {
+        val targetFolder = applicationContext.cacheDir.resolve("converter")
+        val targetFile = targetFolder.resolve("resized.jpg")
+        // prepare folder structure
+        targetFolder.deleteRecursively();
+        targetFolder.mkdirs()
+        // load image
+        val bmOptions = BitmapFactory.Options()
+        bmOptions.inJustDecodeBounds = false
+        val image = BitmapFactory.decodeFile(filePath, bmOptions)
+        // save file, re-encode as JPG
+        FileOutputStream(targetFile).use { out ->
+            image.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        }
+        return targetFile
+    }
+
+    private fun isNormalImageFile(filePath: String): Boolean {
+        return listOf("png", "jpg", "jpeg", "bmp").any { filePath.lowercase().endsWith(it) }
     }
 
     private fun convertWebpToGif(filePath: String): File {

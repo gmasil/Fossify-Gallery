@@ -52,13 +52,12 @@ import java.util.Locale
 fun Activity.sharePath(path: String) {
     ensureBackgroundThread {
         try {
-            sharePathIntent(AnimatedImageConverter(this).convertAnimatedImage(path).absolutePath, BuildConfig.APPLICATION_ID)
-            return@ensureBackgroundThread
+            sharePathIntent(AnimatedImageConverter(this).handleMediaForSharing(path).absolutePath, BuildConfig.APPLICATION_ID)
         } catch (e: Exception) {
             toast("${e.message}, sharing original...")
             e.printStackTrace()
+            sharePathIntent(path, BuildConfig.APPLICATION_ID)
         }
-        sharePathIntent(path, BuildConfig.APPLICATION_ID)
     }
 }
 
