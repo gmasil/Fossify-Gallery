@@ -17,6 +17,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.RelativeLayout
 import androidx.exifinterface.media.ExifInterface.*
 import com.alexvasilkov.gestures.GestureController
@@ -89,6 +90,8 @@ class PhotoFragment : ViewPagerFragment() {
     private var mScreenWidth = 0
     private var mScreenHeight = 0
     private var mCurrentGestureViewZoom = 1f
+    private var mIsTouched = false
+    private var mInitialZoom = 1f
 
     private var mStoredShowExtendedDetails = false
     private var mStoredHideExtendedDetails = false
@@ -145,12 +148,16 @@ class PhotoFragment : ViewPagerFragment() {
 
                 gesturesView.controller.addOnStateChangeListener(object : GestureController.OnStateChangeListener {
                     override fun onStateChanged(state: State) {
+                        if (!mIsTouched) {
+                            mInitialZoom = state.zoom
+                        }
                         mCurrentGestureViewZoom = state.zoom
                     }
                 })
 
                 gesturesView.setOnTouchListener { v, event ->
-                    if (mCurrentGestureViewZoom == 1f) {
+                    mIsTouched = true
+                    if (Math.abs(mCurrentGestureViewZoom - mInitialZoom) < MAX_ZOOM_EQUALITY_TOLERANCE) {
                         handleEvent(event)
                     }
                     false
@@ -220,6 +227,7 @@ class PhotoFragment : ViewPagerFragment() {
 
     override fun onPause() {
         super.onPause()
+        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         storeStateVariables()
     }
 
@@ -245,6 +253,7 @@ class PhotoFragment : ViewPagerFragment() {
             mShouldResetImage = false
         }
 
+        val keepScreenOn = config.keepScreenOn
         val allowPhotoGestures = config.allowPhotoGestures
         val allowInstantChange = config.allowInstantChange
 
@@ -252,6 +261,10 @@ class PhotoFragment : ViewPagerFragment() {
             photoBrightnessController.beVisibleIf(allowPhotoGestures)
             instantPrevItem.beVisibleIf(allowInstantChange)
             instantNextItem.beVisibleIf(allowInstantChange)
+        }
+
+        if (keepScreenOn) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
 
         storeStateVariables()
@@ -271,12 +284,6 @@ class PhotoFragment : ViewPagerFragment() {
         }
 
         mLoadZoomableViewHandler.removeCallbacksAndMessages(null)
-        if (mCurrentRotationDegrees != 0) {
-            ensureBackgroundThread {
-                val path = mMedium.path
-                (activity as? BaseSimpleActivity)?.saveRotatedImageToFile(path, path, mCurrentRotationDegrees, false) {}
-            }
-        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
