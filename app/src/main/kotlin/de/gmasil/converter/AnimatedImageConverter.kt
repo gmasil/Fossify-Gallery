@@ -4,9 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.FFmpegSession
-import com.arthenica.ffmpegkit.ReturnCode
+//import com.arthenica.ffmpegkit.FFmpegKit
+//import com.arthenica.ffmpegkit.FFmpegSession
+//import com.arthenica.ffmpegkit.ReturnCode
 import de.gmasil.converter.api.AnimatedImageHandler
 import de.gmasil.converter.impl.GifImageHandler
 import de.gmasil.converter.impl.WebpImageHandler
@@ -124,28 +124,30 @@ class AnimatedImageConverter(val applicationContext: Context) {
     }
 
     private fun createVideoFromImagesInFolder(folder: String, targetFile: String, totalDelay: Int, frameCount: Int): Boolean {
-        // calculate framerate
-        val inputFramerate: Float  = frameCount / totalDelay.toFloat() * 1000
-        // force 30 FPS output for Telegram animations
-        val outputFramerate = 30
-        Log.i(NAME, "Input framerate: $inputFramerate, output framerate: $outputFramerate")
-        // create inventory file
-        val inventory = StringBuilder()
-        File(folder).listFiles()?.forEach { inventory.append("file '${it.absolutePath}'\n") }
-        val inventoryFile = File(folder, "input.txt")
-        inventoryFile.writeText(inventory.toString())
-        // convert video
-        val ffmpegCommand = "-r $inputFramerate -f concat -safe 0 -i ${inventoryFile.absolutePath} -r $outputFramerate -vcodec libx264 -pix_fmt yuv420p -crf 24 -preset slow -vf \"fps=${outputFramerate},pad=ceil(iw/2)*2:ceil(ih/2)*2\" -movflags +faststart $targetFile"
-        Log.i(NAME, "ffmpeg $ffmpegCommand")
-        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
-        return ReturnCode.isSuccess(session.returnCode)
+//        // calculate framerate
+//        val inputFramerate: Float  = frameCount / totalDelay.toFloat() * 1000
+//        // force 30 FPS output for Telegram animations
+//        val outputFramerate = 30
+//        Log.i(NAME, "Input framerate: $inputFramerate, output framerate: $outputFramerate")
+//        // create inventory file
+//        val inventory = StringBuilder()
+//        File(folder).listFiles()?.forEach { inventory.append("file '${it.absolutePath}'\n") }
+//        val inventoryFile = File(folder, "input.txt")
+//        inventoryFile.writeText(inventory.toString())
+//        // convert video
+//        val ffmpegCommand = "-r $inputFramerate -f concat -safe 0 -i ${inventoryFile.absolutePath} -r $outputFramerate -vcodec libx264 -pix_fmt yuv420p -crf 24 -preset slow -vf \"fps=${outputFramerate},pad=ceil(iw/2)*2:ceil(ih/2)*2\" -movflags +faststart $targetFile"
+//        Log.i(NAME, "ffmpeg $ffmpegCommand")
+//        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
+//        return ReturnCode.isSuccess(session.returnCode)
+        return true
     }
 
     private fun convertVideoToGif(filePath: String, targetFile: String): Boolean {
-        val ffmpegCommand = "-i '$filePath' '$targetFile'"
-        Log.i(NAME, "ffmpeg $ffmpegCommand")
-        val sessionGif: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
-        return ReturnCode.isSuccess(sessionGif.returnCode)
+//        val ffmpegCommand = "-i '$filePath' '$targetFile'"
+//        Log.i(NAME, "ffmpeg $ffmpegCommand")
+//        val sessionGif: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
+//        return ReturnCode.isSuccess(sessionGif.returnCode)
+        return true
     }
 
     private fun convertVideoToGif(filePath: String): File {
@@ -198,18 +200,18 @@ class AnimatedImageConverter(val applicationContext: Context) {
     }
 
     fun convertGifToVideoInSameFolder(filePath: String) {
-        applicationContext.toast("Converting to video...")
-        var targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
-        val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx264 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
-        Log.i(NAME, "ffmpeg $ffmpegCommand")
-        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
-        if(ReturnCode.isSuccess(session.returnCode)) {
-            applicationContext.toast("Video conversion finished")
-        } else {
-            if (File(targetFile).exists()) {
-                File(targetFile).delete()
-            }
-            applicationContext.toast("Video conversion failed")
-        }
+//        applicationContext.toast("Converting to video...")
+//        var targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+//        val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx264 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
+//        Log.i(NAME, "ffmpeg $ffmpegCommand")
+//        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
+//        if(ReturnCode.isSuccess(session.returnCode)) {
+//            applicationContext.toast("Video conversion finished")
+//        } else {
+//            if (File(targetFile).exists()) {
+//                File(targetFile).delete()
+//            }
+//            applicationContext.toast("Video conversion failed")
+//        }
     }
 }

@@ -11,6 +11,13 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { setUrl("https://jitpack.io") }
+        mavenLocal {
+            url = file("../ffmpeg-kit/localrepo").toURI()
+            metadataSources {
+                mavenPom()
+                artifact()
+            }
+        }
     }
 }
 

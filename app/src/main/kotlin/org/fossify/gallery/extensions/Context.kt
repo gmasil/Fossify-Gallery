@@ -56,6 +56,7 @@ import org.fossify.commons.extensions.isWebP
 import org.fossify.commons.extensions.normalizeString
 import org.fossify.commons.extensions.otgPath
 import org.fossify.commons.extensions.recycleBinPath
+import org.fossify.commons.extensions.rescanPath
 import org.fossify.commons.extensions.sdCardPath
 import org.fossify.commons.extensions.toast
 import org.fossify.commons.helpers.AlphanumericComparator
@@ -116,8 +117,10 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.util.Locale
+import java.util.Optional
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.text.toInt
 
 val Context.audioManager get() = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -202,7 +205,7 @@ fun Context.getSortedDirectories(source: ArrayList<Directory>): ArrayList<Direct
         listOf(o1, o2).forEach {
             it.apply {
                 if (sortValue.isEmpty()) {
-                    sortValue = getDirectorySortingValue(path, name, size)
+                    sortValue = getDirectorySortingValue(getMediaFromDirectoryPath(path), path, name, size, mediaCnt)
                 }
             }
         }
@@ -1352,16 +1355,6 @@ fun Context.createDirectoryFromMedia(
         types = mediaTypes,
         sortValue = sortValue
     )
-}
-
-fun Context.getDirectorySortingValue(
-    path: String,
-    name: String,
-    size: Long,
-    count: Int
-): String {
-    val media = getMediaFromDirectoryPath(path)
-    return getDirectorySortingValue(media, path, name, size)
 }
 
 fun Context.getDirectorySortingValue(
