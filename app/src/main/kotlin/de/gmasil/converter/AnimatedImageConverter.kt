@@ -162,6 +162,33 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
     }
 
+    fun convertVideoToGifInSameFolder(filePath: String): Boolean {
+        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+        if (File(targetFile).exists()) {
+            return true;
+        }
+        return convertVideoToGif(filePath, targetFile)
+    }
+
+    fun convertAnimatedImageToGifInSameFolder(filePath: String): Boolean {
+        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".gif"
+        val tmpFile = convertAnimatedImageToVideo(filePath)
+        return convertVideoToGif(tmpFile.path, targetFile)
+    }
+
+    fun convertAnimatedImageToVideoInSameFolder(filePath: String): Boolean {
+        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+        if (File(targetFile).exists()) {
+            return true;
+        }
+        val tmpFile = convertAnimatedImageToVideo(filePath)
+        tmpFile.let { sourceFile ->
+            sourceFile.copyTo(File(targetFile))
+            sourceFile.delete()
+        }
+        return true
+    }
+
     fun convertAnimatedImageToVideo(filePath: String): File {
         // select image type
         var imageHandler: AnimatedImageHandler
@@ -197,7 +224,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
     }
 
-    fun convertGifToVideoInSameFolder(filePath: String): Boolean {
+    fun convertToVideoInSameFolder(filePath: String): Boolean {
         val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
         if (File(targetFile).exists()) {
             return true;
@@ -215,7 +242,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
     }
 
-    fun convertGifToWebpInSameFolder(filePath: String): Boolean {
+    fun convertToWebpInSameFolder(filePath: String): Boolean {
         val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".webp"
         if (File(targetFile).exists()) {
             return true

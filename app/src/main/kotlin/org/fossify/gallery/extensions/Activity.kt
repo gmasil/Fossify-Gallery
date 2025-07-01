@@ -91,12 +91,28 @@ fun Activity.openEditor(path: String, forceChooser: Boolean = false) {
     openEditorIntent(newPath, forceChooser, BuildConfig.APPLICATION_ID)
 }
 
-fun Activity.convertMedia(mediaList: List<Medium>) {
+fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
+    val converter = AnimatedImageConverter(this)
     ensureBackgroundThread {
-        val converter = AnimatedImageConverter(this)
         for (medium in mediaList) {
-            if(medium.path.lowercase().endsWith(".gif")) {
-                converter.convertGifToWebpInSameFolder(medium.path)
+            if(medium.path.lowercase().endsWith(".${targetType.lowercase()}")) {
+                // do not convert to the same type, no conversion needed
+                continue
+            }
+            if (targetType.lowercase() == "mp4") {
+                if(medium.path.lowercase().endsWith(".webp")) {
+                    converter.convertAnimatedImageToVideoInSameFolder(medium.path)
+                } else if(medium.path.lowercase().endsWith(".gif")) {
+                    converter.convertToVideoInSameFolder(medium.path)
+                }
+            } else if(targetType.lowercase() == "webp") {
+                converter.convertToWebpInSameFolder(medium.path)
+            } else if(targetType.lowercase() == "gif") {
+                if(medium.path.lowercase().endsWith(".webp")) {
+                    converter.convertAnimatedImageToGifInSameFolder(medium.path)
+                } else if(medium.path.lowercase().endsWith(".mp4")) {
+                    converter.convertVideoToGifInSameFolder(medium.path)
+                }
             }
         }
         applicationContext.toast("Conversion finished")

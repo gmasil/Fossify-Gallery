@@ -3,6 +3,9 @@
     <string name="app_launcher_name">Gallery</string>
     <string name="edit">Edit</string>
     <string name="convert">Convert</string>
+    <string name="convert_mp4">Convert to mp4</string>
+    <string name="convert_webp">Convert to webp</string>
+    <string name="convert_gif">Convert to gif</string>
     <string name="open_camera">Open camera</string>
     <string name="hidden">(hidden)</string>
     <string name="excluded">(excluded)</string>

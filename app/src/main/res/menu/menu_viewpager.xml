@@ -95,7 +95,19 @@
         android:id="@+id/menu_convert"
         android:icon="@drawable/ic_edit_vector"
         android:title="@string/convert"
-        app:showAsAction="never" />
+        app:showAsAction="never">
+        <menu>
+            <item
+                android:id="@+id/menu_convert_mp4"
+                android:title="@string/convert_mp4" />
+            <item
+                android:id="@+id/menu_convert_webp"
+                android:title="@string/convert_webp" />
+            <item
+                android:id="@+id/menu_convert_gif"
+                android:title="@string/convert_gif" />
+        </menu>
+    </item>
     <item
         android:id="@+id/menu_add_to_favorites"
         android:icon="@drawable/ic_star_outline_vector"
