@@ -94,6 +94,11 @@
         android:title="@string/edit"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/cab_convert"
+        android:icon="@drawable/ic_edit_vector"
+        android:title="@string/convert"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/cab_add_to_favorites"
         android:icon="@drawable/ic_star_outline_vector"
         android:title="@string/add_to_favorites"

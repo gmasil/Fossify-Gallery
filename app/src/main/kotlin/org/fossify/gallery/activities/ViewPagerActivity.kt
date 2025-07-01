@@ -171,6 +171,7 @@ class ViewPagerActivity : SimpleActivity(), ViewPager.OnPageChangeListener, View
                 findItem(R.id.menu_delete).isVisible = visibleBottomActions and BOTTOM_ACTION_DELETE == 0
                 findItem(R.id.menu_share).isVisible = visibleBottomActions and BOTTOM_ACTION_SHARE == 0
                 findItem(R.id.menu_edit).isVisible = visibleBottomActions and BOTTOM_ACTION_EDIT == 0 && !currentMedium.isSVG()
+                findItem(R.id.menu_convert).isVisible = true
                 findItem(R.id.menu_rename).isVisible = visibleBottomActions and BOTTOM_ACTION_RENAME == 0 && !currentMedium.getIsInRecycleBin()
                 findItem(R.id.menu_rotate).isVisible = currentMedium.isImage() && visibleBottomActions and BOTTOM_ACTION_ROTATE == 0
                 findItem(R.id.menu_set_as).isVisible = visibleBottomActions and BOTTOM_ACTION_SET_AS == 0
@@ -238,6 +239,7 @@ class ViewPagerActivity : SimpleActivity(), ViewPager.OnPageChangeListener, View
                 R.id.menu_rename -> checkMediaManagementAndRename()
                 R.id.menu_print -> printFile()
                 R.id.menu_edit -> openEditor(getCurrentPath())
+                R.id.menu_convert -> convertMedia(listOf(getCurrentMedium()!!))
                 R.id.menu_properties -> showProperties()
                 R.id.menu_show_on_map -> showFileOnMap(getCurrentPath())
                 R.id.menu_rotate_right -> rotateImage(90)
@@ -847,7 +849,11 @@ class ViewPagerActivity : SimpleActivity(), ViewPager.OnPageChangeListener, View
         binding.bottomActions.bottomEdit.setOnLongClickListener {
             if(getCurrentPath().lowercase().endsWith(".gif")) {
                 ensureBackgroundThread {
-                    AnimatedImageConverter(applicationContext).convertGifToVideoInSameFolder(getCurrentPath())
+                    if(AnimatedImageConverter(applicationContext).convertGifToVideoInSameFolder(getCurrentPath())) {
+                        applicationContext.toast("Video conversion finished")
+                    } else {
+                        applicationContext.toast("Video conversion failed")
+                    }
                 }
             } else {
                 toast(R.string.edit)

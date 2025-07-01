@@ -45,6 +45,7 @@ import org.fossify.gallery.dialogs.ResizeWithPathDialog
 import org.fossify.gallery.helpers.DIRECTORY
 import org.fossify.gallery.helpers.RECYCLE_BIN
 import org.fossify.gallery.models.DateTaken
+import org.fossify.gallery.models.Medium
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -88,6 +89,18 @@ fun Activity.openPath(path: String, forceChooser: Boolean, extras: HashMap<Strin
 fun Activity.openEditor(path: String, forceChooser: Boolean = false) {
     val newPath = path.removePrefix("file://")
     openEditorIntent(newPath, forceChooser, BuildConfig.APPLICATION_ID)
+}
+
+fun Activity.convertMedia(mediaList: List<Medium>) {
+    ensureBackgroundThread {
+        val converter = AnimatedImageConverter(this)
+        for (medium in mediaList) {
+            if(medium.path.lowercase().endsWith(".gif")) {
+                converter.convertGifToWebpInSameFolder(medium.path)
+            }
+        }
+        applicationContext.toast("Conversion finished")
+    }
 }
 
 fun Activity.launchCamera() {

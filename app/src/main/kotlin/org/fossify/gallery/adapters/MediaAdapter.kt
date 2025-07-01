@@ -58,6 +58,7 @@ import org.fossify.gallery.databinding.VideoItemGridBinding
 import org.fossify.gallery.databinding.VideoItemListBinding
 import org.fossify.gallery.dialogs.DeleteWithRememberDialog
 import org.fossify.gallery.extensions.config
+import org.fossify.gallery.extensions.convertMedia
 import org.fossify.gallery.extensions.fixDateTaken
 import org.fossify.gallery.extensions.getShortcutImage
 import org.fossify.gallery.extensions.handleMediaManagementPrompt
@@ -193,6 +194,7 @@ class MediaAdapter(
             findItem(R.id.cab_move_to).isVisible = !isInRecycleBin
             findItem(R.id.cab_open_with).isVisible = isOneItemSelected
             findItem(R.id.cab_edit).isVisible = isOneItemSelected
+            findItem(R.id.cab_convert).isVisible = true
             findItem(R.id.cab_set_as).isVisible = isOneItemSelected
             findItem(R.id.cab_resize).isVisible = canResize(selectedItems)
             findItem(R.id.cab_confirm_selection).isVisible = isAGetIntent && allowMultiplePicks && selectedKeys.isNotEmpty()
@@ -214,6 +216,7 @@ class MediaAdapter(
             R.id.cab_properties -> showProperties()
             R.id.cab_rename -> checkMediaManagementAndRename()
             R.id.cab_edit -> editFile()
+            R.id.cab_convert -> convertFiles()
             R.id.cab_hide -> toggleFileVisibility(true)
             R.id.cab_unhide -> toggleFileVisibility(false)
             R.id.cab_add_to_favorites -> toggleFavorites(true)
@@ -323,6 +326,11 @@ class MediaAdapter(
     private fun editFile() {
         val path = getFirstSelectedItemPath() ?: return
         activity.openEditor(path)
+    }
+
+    private fun convertFiles() {
+        val paths = getSelectedItems()
+        activity.convertMedia(paths)
     }
 
     private fun openPath() {

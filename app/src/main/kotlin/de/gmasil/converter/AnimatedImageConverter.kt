@@ -16,7 +16,7 @@ import java.io.FileOutputStream
 import java.io.OutputStream
 
 
-class AnimatedImageConverter(val applicationContext: Context) {
+class AnimatedImageConverter(private val applicationContext: Context) {
 
     companion object {
         const val FILE_PADDING = 6
@@ -197,19 +197,39 @@ class AnimatedImageConverter(val applicationContext: Context) {
         }
     }
 
-    fun convertGifToVideoInSameFolder(filePath: String) {
-        applicationContext.toast("Converting to video...")
-        var targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+    fun convertGifToVideoInSameFolder(filePath: String): Boolean {
+        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+        if (File(targetFile).exists()) {
+            return true;
+        }
         val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx264 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
         Log.i(NAME, "ffmpeg $ffmpegCommand")
         val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
         if(ReturnCode.isSuccess(session.returnCode)) {
-            applicationContext.toast("Video conversion finished")
+            return true
         } else {
             if (File(targetFile).exists()) {
                 File(targetFile).delete()
             }
-            applicationContext.toast("Video conversion failed")
+            return false
+        }
+    }
+
+    fun convertGifToWebpInSameFolder(filePath: String): Boolean {
+        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".webp"
+        if (File(targetFile).exists()) {
+            return true
+        }
+        val ffmpegCommand = "-i \"$filePath\" -vcodec webp -loop 0 -pix_fmt yuva420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
+        Log.i(NAME, "ffmpeg $ffmpegCommand")
+        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
+        if(ReturnCode.isSuccess(session.returnCode)) {
+            return true;
+        } else {
+            if (File(targetFile).exists()) {
+                File(targetFile).delete()
+            }
+            return false
         }
     }
 }
