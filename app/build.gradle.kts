@@ -157,7 +157,8 @@ dependencies {
     implementation(libs.picasso) {
         exclude(group = "com.squareup.okhttp3", module = "okhttp")
     }
-    // implementation(libs.arthenica.ffmpeg)
+    implementation(files("libs/ffmpeg-kit-full-gpl-6.0-2.aar"))
+    implementation(libs.arthenica.smart.exception)
     compileOnly(libs.okhttp)
 
     ksp(libs.glide.compiler)

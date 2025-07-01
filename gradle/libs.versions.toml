@@ -32,7 +32,7 @@ media3Exoplayer = "1.4.1"
 okhttp = "4.12.0"
 okio = "3.13.0"
 picasso = "2.71828"
-ffmpeg = "6.0-2"
+smart-exception = "0.2.1"
 subsamplingScaleImageView = "d705c3c4ad"
 #build
 app-build-compileSDKVersion = "34"
@@ -68,7 +68,7 @@ awebp = { module = "com.github.penfeizhou.android.animation:awebp", version.ref 
 glide-compiler = { module = "com.github.bumptech.glide:ksp", version.ref = "glideCompiler" }
 zjupure-webpdecoder = { module = "com.github.zjupure:webpdecoder", version.ref = "zjupureWebpdecoder" }
 picasso = { module = "com.squareup.picasso:picasso", version.ref = "picasso" }
-arthenica-ffmpeg = { module = "com.arthenica:ffmpeg-kit-full-gpl", version.ref = "ffmpeg" }
+arthenica-smart-exception = { module = "com.arthenica:smart-exception-java", version.ref = "smart-exception" }
 avif-integration = { group = "com.github.bumptech.glide", name = "avif-integration", version.ref = "glideCompiler" }
 jxl-integration = { group = "io.github.awxkee", name = "jxl-coder-glide", version.ref = "jxlDecoder" }
 [bundles]
