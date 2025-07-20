@@ -102,7 +102,7 @@ fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
             if (targetType.lowercase() == "mp4") {
                 if(medium.path.lowercase().endsWith(".webp")) {
                     converter.convertAnimatedImageToVideoInSameFolder(medium.path)
-                } else if(medium.path.lowercase().endsWith(".gif")) {
+                } else if(medium.path.lowercase().endsWith(".gif") || medium.path.lowercase().endsWith(".webm")) {
                     converter.convertToVideoInSameFolder(medium.path)
                 }
             } else if(targetType.lowercase() == "webp") {
