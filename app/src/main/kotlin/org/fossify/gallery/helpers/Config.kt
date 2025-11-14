@@ -137,6 +137,12 @@ class Config(context: Context) : BaseConfig(context) {
         prioritizedFolders = currPrioritizedFolders
     }
 
+    fun addPrioritizedFolders(values: Set<String>) {
+        val currPrioritizedFolders = HashSet<String>(prioritizedFolders)
+        currPrioritizedFolders.addAll(values)
+        prioritizedFolders = currPrioritizedFolders.filter { it.isNotEmpty() }.toHashSet()
+    }
+
     fun removePrioritizedFolder(value: String) {
         val currPrioritizedFolders = HashSet<String>(prioritizedFolders)
         currPrioritizedFolders.remove(value)
