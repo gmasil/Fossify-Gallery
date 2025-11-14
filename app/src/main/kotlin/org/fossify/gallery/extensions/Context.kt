@@ -7,9 +7,11 @@ import android.content.Context
 import android.content.Intent
 import android.database.Cursor
 import android.graphics.Bitmap
+import android.graphics.Bitmap.CompressFormat
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.PictureDrawable
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Process
 import android.provider.MediaStore.Files
 import android.provider.MediaStore.Images
@@ -39,6 +41,7 @@ import org.fossify.commons.extensions.getDoesFilePathExist
 import org.fossify.commons.extensions.getDuration
 import org.fossify.commons.extensions.getFilenameFromPath
 import org.fossify.commons.extensions.getLongValue
+import org.fossify.commons.extensions.getMimeTypeFromUri
 import org.fossify.commons.extensions.getOTGPublicPath
 import org.fossify.commons.extensions.getParentPath
 import org.fossify.commons.extensions.getStringValue
@@ -692,7 +695,6 @@ fun Context.loadImageBase(
     }
 
     // animation is only supported without rounded corners and the file must be a GIF or WEBP.
-    // Glide doesn't support animated AVIF: https://bumptech.github.io/glide/int/avif.html
     if (animate && roundCorners == ROUNDED_CORNERS_NONE && (path.isGif() || path.isWebP())) {
         // this is required to make glide cache aware of changes
         options.decode(Drawable::class.java)
@@ -972,10 +974,9 @@ fun Context.getCachedMedia(
             }
         }) as ArrayList<Medium>
 
-        val pathToUse = if (path.isEmpty()) SHOW_ALL else path
+        val pathToUse = path.ifEmpty { SHOW_ALL }
         mediaFetcher.sortMedia(media, config.getFolderSorting(pathToUse), pathToUse)
         val grouped = mediaFetcher.groupMedia(media, pathToUse)
-
         callback(grouped.clone() as ArrayList<ThumbnailItem>)
         val OTGPath = config.OTGPath
 
@@ -1488,4 +1489,26 @@ fun Context.getFileDateTaken(path: String): Long {
     }
 
     return 0L
+}
+
+fun Context.getCompressionFormatFromUri(uri: Uri): CompressFormat {
+    val type = getMimeTypeFromUri(uri)
+    return when {
+        type.equals("image/png", true) -> CompressFormat.PNG
+        type.equals("image/webp", true) -> CompressFormat.WEBP
+        else -> CompressFormat.JPEG
+    }
+}
+
+fun Context.resolveUriScheme(
+    uri: Uri,
+    onPath: (String) -> Unit,
+    onContentUri: (Uri) -> Unit,
+    onUnknown: () -> Unit = { toast(R.string.unknown_file_location) }
+) {
+    when (uri.scheme) {
+        "file" -> onPath(uri.path!!)
+        "content" -> onContentUri(uri)
+        else -> onUnknown()
+    }
 }

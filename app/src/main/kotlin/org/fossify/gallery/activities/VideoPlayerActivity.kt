@@ -1,9 +1,12 @@
 package org.fossify.gallery.activities
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Intent
-import android.content.pm.ActivityInfo
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Point
@@ -19,7 +22,6 @@ import android.view.Surface
 import android.view.TextureView
 import android.view.View
 import android.view.WindowManager
-import android.widget.RelativeLayout
 import android.widget.SeekBar
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.media3.common.AudioAttributes
@@ -38,7 +40,7 @@ import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
-import org.fossify.commons.extensions.actionBarHeight
+import com.google.android.material.appbar.AppBarLayout
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beVisible
 import org.fossify.commons.extensions.beVisibleIf
@@ -47,21 +49,16 @@ import org.fossify.commons.extensions.getColoredDrawableWithColor
 import org.fossify.commons.extensions.getFilenameFromUri
 import org.fossify.commons.extensions.getFormattedDuration
 import org.fossify.commons.extensions.getProperTextColor
-import org.fossify.commons.extensions.navigationBarHeight
-import org.fossify.commons.extensions.navigationBarOnSide
-import org.fossify.commons.extensions.navigationBarWidth
 import org.fossify.commons.extensions.onGlobalLayout
-import org.fossify.commons.extensions.portrait
 import org.fossify.commons.extensions.setDrawablesRelativeWithIntrinsicBounds
 import org.fossify.commons.extensions.showErrorToast
-import org.fossify.commons.extensions.statusBarHeight
 import org.fossify.commons.extensions.updateTextColors
 import org.fossify.commons.extensions.viewBinding
 import org.fossify.gallery.R
 import org.fossify.gallery.databinding.ActivityVideoPlayerBinding
 import org.fossify.gallery.extensions.config
+import org.fossify.gallery.extensions.getFormattedDuration
 import org.fossify.gallery.extensions.getFriendlyMessage
-import org.fossify.gallery.extensions.hasNavBar
 import org.fossify.gallery.extensions.hideSystemUI
 import org.fossify.gallery.extensions.mute
 import org.fossify.gallery.extensions.openPath
@@ -84,11 +81,16 @@ import org.fossify.gallery.helpers.SHOW_NEXT_ITEM
 import org.fossify.gallery.helpers.SHOW_PREV_ITEM
 import org.fossify.gallery.interfaces.PlaybackSpeedListener
 import java.text.DecimalFormat
+import kotlin.math.max
+import kotlin.math.min
 
 @UnstableApi
-open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener,
+open class VideoPlayerActivity : BaseViewerActivity(), SeekBar.OnSeekBarChangeListener,
     TextureView.SurfaceTextureListener, PlaybackSpeedListener {
-    private val PLAY_WHEN_READY_DRAG_DELAY = 100L
+    companion object {
+        private const val PLAY_WHEN_READY_DRAG_DELAY = 100L
+        private const val UPDATE_INTERVAL_MS = 250L
+    }
 
     private var mIsFullscreen = false
     private var mIsPlaying = false
@@ -96,8 +98,8 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
     private var mIsDragged = false
     private var mIsOrientationLocked = false
     private var mScreenWidth = 0
-    private var mCurrTime = 0
-    private var mDuration = 0
+    private var mCurrTime = 0L
+    private var mDuration = 0L
     private var mDragThreshold = 0f
     private var mTouchDownX = 0f
     private var mTouchDownY = 0f
@@ -115,19 +117,25 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
 
     private val binding by viewBinding(ActivityVideoPlayerBinding::inflate)
 
+    override val contentHolder: View
+        get() = binding.videoPlayerHolder
+
+    override val appBarLayout: AppBarLayout
+        get() = binding.videoAppbar
+
     public override fun onCreate(savedInstanceState: Bundle?) {
-        showTransparentTop = true
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
+        setupEdgeToEdge(
+            padBottomSystem = listOf(binding.bottomVideoTimeHolder.root),
+        )
         setupOptionsMenu()
         setupOrientation()
-        checkNotchSupport()
         initPlayer()
     }
 
     override fun onResume() {
         super.onResume()
-        binding.topShadow.layoutParams.height = statusBarHeight + actionBarHeight
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
         if (config.blackBackground) {
@@ -141,12 +149,6 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
         }
 
         updateTextColors(binding.videoPlayerHolder)
-
-        if (!portrait && navigationBarOnSide && navigationBarWidth > 0) {
-            binding.videoToolbar.setPadding(0, 0, navigationBarWidth, 0)
-        } else {
-            binding.videoToolbar.setPadding(0, 0, 0, 0)
-        }
     }
 
     override fun onPause() {
@@ -171,8 +173,6 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
     }
 
     private fun setupOptionsMenu() {
-        (binding.videoAppbar.layoutParams as RelativeLayout.LayoutParams).topMargin =
-            statusBarHeight
         binding.videoToolbar.apply {
             setTitleTextColor(Color.WHITE)
             overflowIcon = resources.getColoredDrawableWithColor(
@@ -188,7 +188,10 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
         updateMenuItemColors(binding.videoToolbar.menu, forceWhiteIcons = true)
         binding.videoToolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
-                R.id.menu_change_orientation -> changeOrientation()
+                R.id.menu_force_portrait -> toggleOrientation(SCREEN_ORIENTATION_PORTRAIT)
+                R.id.menu_force_landscape -> toggleOrientation(SCREEN_ORIENTATION_LANDSCAPE)
+                R.id.menu_force_landscape_reverse -> toggleOrientation(SCREEN_ORIENTATION_REVERSE_LANDSCAPE)
+                R.id.menu_default_orientation -> toggleOrientation(SCREEN_ORIENTATION_UNSPECIFIED)
                 R.id.menu_open_with -> openPath(mUri!!.toString(), true)
                 R.id.menu_share -> shareMediumPath(mUri!!.toString())
                 else -> return@setOnMenuItemClickListener false
@@ -208,23 +211,14 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
         binding.videoSurfaceFrame.onGlobalLayout {
             binding.videoSurfaceFrame.controller.resetState()
         }
-
-        binding.topShadow.layoutParams.height = statusBarHeight + actionBarHeight
-        (binding.videoAppbar.layoutParams as RelativeLayout.LayoutParams).topMargin =
-            statusBarHeight
-        if (!portrait && navigationBarOnSide && navigationBarWidth > 0) {
-            binding.videoToolbar.setPadding(0, 0, navigationBarWidth, 0)
-        } else {
-            binding.videoToolbar.setPadding(0, 0, 0, 0)
-        }
     }
 
     private fun setupOrientation() {
         if (!mIsOrientationLocked) {
             if (config.screenRotation == ROTATE_BY_DEVICE_ROTATION) {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                requestedOrientation = SCREEN_ORIENTATION_SENSOR
             } else if (config.screenRotation == ROTATE_BY_SYSTEM_SETTING) {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                requestedOrientation = SCREEN_ORIENTATION_UNSPECIFIED
             }
         }
     }
@@ -234,7 +228,7 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
         binding.videoToolbar.title = getFilenameFromUri(mUri!!)
         initTimeHolder()
 
-        showSystemUI(true)
+        showSystemUI()
         window.decorView.setOnSystemUiVisibilityChangeListener { visibility ->
             val isFullscreen = visibility and View.SYSTEM_UI_FLAG_FULLSCREEN != 0
             fullscreenToggled(isFullscreen)
@@ -418,8 +412,8 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
             binding.bottomVideoTimeHolder.videoToggleMute.beVisible()
             binding.bottomVideoTimeHolder.videoPlaybackSpeed.text =
                 "${DecimalFormat("#.##").format(config.playbackSpeed)}x"
-            mDuration = (mExoPlayer!!.duration / 1000).toInt()
-            binding.bottomVideoTimeHolder.videoSeekbar.max = mDuration
+            mDuration = mExoPlayer!!.duration
+            binding.bottomVideoTimeHolder.videoSeekbar.max = mDuration.toInt()
             binding.bottomVideoTimeHolder.videoDuration.text = mDuration.getFormattedDuration()
             setPosition(mCurrTime)
             updatePlaybackSpeed(config.playbackSpeed)
@@ -500,16 +494,16 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
         )
     }
 
-    private fun setPosition(seconds: Int) {
-        mExoPlayer?.seekTo(seconds * 1000L)
-        binding.bottomVideoTimeHolder.videoSeekbar.progress = seconds
-        binding.bottomVideoTimeHolder.videoCurrTime.text = seconds.getFormattedDuration()
+    private fun setPosition(milliseconds: Long) {
+        mExoPlayer?.seekTo(milliseconds)
+        binding.bottomVideoTimeHolder.videoSeekbar.progress = milliseconds.toInt()
+        binding.bottomVideoTimeHolder.videoCurrTime.text = milliseconds.getFormattedDuration()
     }
 
     private fun setLastVideoSavedPosition() {
-        val pos = config.getLastVideoPosition(mUri.toString())
-        if (pos > 0) {
-            setPosition(pos)
+        val seconds = config.getLastVideoPosition(mUri.toString())
+        if (seconds > 0) {
+            setPosition(seconds * 1000L)
         }
     }
 
@@ -519,7 +513,7 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
         }
 
         clearLastVideoSavedProgress()
-        mCurrTime = (mExoPlayer!!.duration / 1000).toInt()
+        mCurrTime = mExoPlayer!!.duration
         binding.bottomVideoTimeHolder.videoSeekbar.progress =
             binding.bottomVideoTimeHolder.videoSeekbar.max
         binding.bottomVideoTimeHolder.videoCurrTime.text = mDuration.getFormattedDuration()
@@ -574,21 +568,16 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
 
         if (config.screenRotation == ROTATE_BY_ASPECT_RATIO) {
             if (mVideoSize.x > mVideoSize.y) {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                requestedOrientation = SCREEN_ORIENTATION_LANDSCAPE
             } else if (mVideoSize.x < mVideoSize.y) {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                requestedOrientation = SCREEN_ORIENTATION_PORTRAIT
             }
         }
     }
 
-    private fun changeOrientation() {
-        mIsOrientationLocked = true
-        requestedOrientation =
-            if (resources.configuration.orientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
-                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            } else {
-                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            }
+    private fun toggleOrientation(orientation: Int) {
+        mIsOrientationLocked = orientation != SCREEN_ORIENTATION_UNSPECIFIED
+        requestedOrientation = orientation
     }
 
     private fun toggleFullscreen() {
@@ -598,9 +587,9 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
     private fun fullscreenToggled(isFullScreen: Boolean) {
         mIsFullscreen = isFullScreen
         if (isFullScreen) {
-            hideSystemUI(true)
+            hideSystemUI()
         } else {
-            showSystemUI(true)
+            showSystemUI()
         }
 
         val newAlpha = if (isFullScreen) 0f else 1f
@@ -666,23 +655,11 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
     }
 
     private fun initTimeHolder() {
-        var right = 0
-        var bottom = 0
-
-        if (hasNavBar()) {
-            if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
-                bottom += navigationBarHeight
-            } else {
-                right += navigationBarWidth
-                bottom += navigationBarHeight
-            }
-        }
-
-        binding.bottomVideoTimeHolder.videoTimeHolder.setPadding(0, 0, right, bottom)
         binding.bottomVideoTimeHolder.videoSeekbar.setOnSeekBarChangeListener(this)
-        binding.bottomVideoTimeHolder.videoSeekbar.max = mDuration
+        binding.bottomVideoTimeHolder.videoSeekbar.max = mDuration.toInt()
         binding.bottomVideoTimeHolder.videoDuration.text = mDuration.getFormattedDuration()
         binding.bottomVideoTimeHolder.videoCurrTime.text = mCurrTime.getFormattedDuration()
+        applyProperHorizontalInsets(binding.bottomVideoTimeHolder.videoTimeHolder)
         setupTimer()
     }
 
@@ -690,13 +667,13 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
         runOnUiThread(object : Runnable {
             override fun run() {
                 if (mExoPlayer != null && !mIsDragged && mIsPlaying) {
-                    mCurrTime = (mExoPlayer!!.currentPosition / 1000).toInt()
-                    binding.bottomVideoTimeHolder.videoSeekbar.progress = mCurrTime
+                    mCurrTime = mExoPlayer!!.currentPosition
+                    binding.bottomVideoTimeHolder.videoSeekbar.progress = mCurrTime.toInt()
                     binding.bottomVideoTimeHolder.videoCurrTime.text =
                         mCurrTime.getFormattedDuration()
                 }
 
-                mTimerHandler.postDelayed(this, 1000)
+                mTimerHandler.postDelayed(this, UPDATE_INTERVAL_MS)
             }
         })
     }
@@ -707,12 +684,10 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
         }
 
         val curr = mExoPlayer!!.currentPosition
-        val newProgress =
+        var newPosition =
             if (forward) curr + FAST_FORWARD_VIDEO_MS else curr - FAST_FORWARD_VIDEO_MS
-        val roundProgress = Math.round(newProgress / 1000f)
-        val limitedProgress =
-            Math.max(Math.min(mExoPlayer!!.duration.toInt() / 1000, roundProgress), 0)
-        setPosition(limitedProgress)
+        newPosition = newPosition.coerceIn(0, mExoPlayer!!.duration)
+        setPosition(newPosition)
         if (!mIsPlaying) {
             togglePlayPause()
         }
@@ -748,14 +723,12 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
                     mIgnoreCloseDown = true
                     mIsDragged = true
                     var percent = ((diffX / mScreenWidth) * 100).toInt()
-                    percent = Math.min(100, Math.max(-100, percent))
+                    percent = min(100, max(-100, percent))
 
-                    val skipLength = (mDuration * 1000f) * (percent / 100f)
+                    val skipLength = mDuration * (percent.toDouble() / 100)
                     var newProgress = mProgressAtDown + skipLength
-                    newProgress =
-                        Math.max(Math.min(mExoPlayer!!.duration.toFloat(), newProgress), 0f)
-                    val newSeconds = (newProgress / 1000).toInt()
-                    setPosition(newSeconds)
+                    newProgress = newProgress.coerceIn(0.0, mExoPlayer!!.duration.toDouble())
+                    setPosition(newProgress.toLong())
                     resetPlayWhenReady()
                 }
             }
@@ -796,7 +769,7 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
     private fun handleNextFile() {
         Intent().apply {
             putExtra(GO_TO_NEXT_ITEM, true)
-            setResult(Activity.RESULT_OK, this)
+            setResult(RESULT_OK, this)
         }
         finish()
     }
@@ -804,7 +777,7 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
     private fun handlePrevFile() {
         Intent().apply {
             putExtra(GO_TO_PREV_ITEM, true)
-            setResult(Activity.RESULT_OK, this)
+            setResult(RESULT_OK, this)
         }
         finish()
     }
@@ -827,7 +800,7 @@ open class VideoPlayerActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListen
 
     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
         if (mExoPlayer != null && fromUser) {
-            setPosition(progress)
+            setPosition(progress.toLong())
             resetPlayWhenReady()
         }
     }

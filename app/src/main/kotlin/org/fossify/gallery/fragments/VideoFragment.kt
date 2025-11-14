@@ -18,11 +18,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ImageView
-import android.widget.RelativeLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.view.children
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat.Type
+import androidx.core.view.updateLayoutParams
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -44,30 +45,30 @@ import com.bumptech.glide.Glide
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beGoneIf
 import org.fossify.commons.extensions.beInvisible
-import org.fossify.commons.extensions.beInvisibleIf
 import org.fossify.commons.extensions.beVisible
 import org.fossify.commons.extensions.beVisibleIf
 import org.fossify.commons.extensions.fadeIn
+import org.fossify.commons.extensions.fadeOut
 import org.fossify.commons.extensions.getDuration
 import org.fossify.commons.extensions.getFormattedDuration
 import org.fossify.commons.extensions.getProperTextColor
 import org.fossify.commons.extensions.getVideoResolution
 import org.fossify.commons.extensions.isGone
 import org.fossify.commons.extensions.isVisible
-import org.fossify.commons.extensions.navigationBarHeight
-import org.fossify.commons.extensions.navigationBarWidth
 import org.fossify.commons.extensions.onGlobalLayout
-import org.fossify.commons.extensions.realScreenSize
 import org.fossify.commons.extensions.setDrawablesRelativeWithIntrinsicBounds
 import org.fossify.commons.extensions.showErrorToast
 import org.fossify.commons.extensions.updateTextColors
+import org.fossify.commons.helpers.DEFAULT_ANIMATION_DURATION
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.gallery.R
+import org.fossify.gallery.activities.BaseViewerActivity
 import org.fossify.gallery.activities.VideoActivity
 import org.fossify.gallery.databinding.PagerVideoItemBinding
 import org.fossify.gallery.extensions.config
+import org.fossify.gallery.extensions.getBottomActionsHeight
+import org.fossify.gallery.extensions.getFormattedDuration
 import org.fossify.gallery.extensions.getFriendlyMessage
-import org.fossify.gallery.extensions.hasNavBar
 import org.fossify.gallery.extensions.mute
 import org.fossify.gallery.extensions.parseFileChannel
 import org.fossify.gallery.extensions.unmute
@@ -87,7 +88,10 @@ import java.text.DecimalFormat
 @UnstableApi
 class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
     SeekBar.OnSeekBarChangeListener, PlaybackSpeedListener {
-    private val PROGRESS = "progress"
+    companion object {
+        private const val PROGRESS = "progress"
+        private const val UPDATE_INTERVAL_MS = 250L
+    }
 
     private var mIsFullscreen = false
     private var mWasFragmentInit = false
@@ -99,9 +103,9 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
     private var mWasLastPositionRestored = false
     private var mPlayOnPrepared = false
     private var mIsPlayerPrepared = false
-    private var mCurrTime = 0
-    private var mDuration = 0
-    private var mPositionWhenInit = 0
+    private var mCurrTime = 0L
+    private var mDuration = 0L
+    private var mPositionWhenInit = 0L
     private var mPositionAtPause = 0L
     var mIsPlaying = false
 
@@ -216,6 +220,15 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
                 false
             }
         }
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.videoHolder) { _, insets ->
+            val system = insets.getInsetsIgnoringVisibility(Type.systemBars())
+            binding.bottomActionsDummy.updateLayoutParams<ViewGroup.LayoutParams> {
+                height = resources.getBottomActionsHeight() + system.bottom
+            }
+            insets
+        }
+
         mView = binding.root
 
         if (!arguments.getBoolean(SHOULD_INIT_FRAGMENT, true)) {
@@ -230,8 +243,7 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
             mIsFragmentVisible = true
         }
 
-        mIsFullscreen =
-            activity.window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_FULLSCREEN == View.SYSTEM_UI_FLAG_FULLSCREEN
+        mIsFullscreen = listener?.isFullScreen() == true
         initTimeHolder()
         // checkIfPanorama() TODO: Implement panorama using a FOSS library
 
@@ -254,7 +266,7 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
 
         if (!mIsPanorama) {
             if (savedInstanceState != null) {
-                mCurrTime = savedInstanceState.getInt(PROGRESS)
+                mCurrTime = savedInstanceState.getLong(PROGRESS, 0L)
             }
 
             mWasFragmentInit = true
@@ -357,8 +369,6 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         setVideoSize()
-        initTimeHolder()
-        checkExtendedDetails()
         binding.videoSurfaceFrame.onGlobalLayout {
             binding.videoSurfaceFrame.controller.resetState()
         }
@@ -366,7 +376,7 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putInt(PROGRESS, mCurrTime)
+        outState.putLong(PROGRESS, mCurrTime)
     }
 
     private fun storeStateVariables() {
@@ -393,15 +403,15 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
     }
 
     private fun restoreLastVideoSavedPosition() {
-        val pos = mConfig.getLastVideoPosition(mMedium.path)
-        if (pos > 0) {
-            mPositionAtPause = pos * 1000L
-            setPosition(pos)
+        val seconds = mConfig.getLastVideoPosition(mMedium.path)
+        if (seconds > 0) {
+            mPositionAtPause = seconds * 1000L
+            setPosition(seconds * 1000L)
         }
     }
 
     private fun setupTimeHolder() {
-        mSeekBar.max = mDuration
+        mSeekBar.max = mDuration.toInt()
         binding.bottomVideoTimeHolder.videoDuration.text = mDuration.getFormattedDuration()
         setupTimer()
     }
@@ -410,12 +420,12 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
         activity?.runOnUiThread(object : Runnable {
             override fun run() {
                 if (mExoPlayer != null && !mIsDragged && mIsPlaying) {
-                    mCurrTime = (mExoPlayer!!.currentPosition / 1000).toInt()
-                    mSeekBar.progress = mCurrTime
+                    mCurrTime = mExoPlayer!!.currentPosition
+                    mSeekBar.progress = mCurrTime.toInt()
                     mCurrTimeView.text = mCurrTime.getFormattedDuration()
                 }
 
-                mTimerHandler.postDelayed(this, 1000)
+                mTimerHandler.postDelayed(this, UPDATE_INTERVAL_MS)
             }
         })
     }
@@ -554,18 +564,10 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
     private fun checkExtendedDetails() {
         if (mConfig.showExtendedDetails) {
             binding.videoDetails.apply {
-                beInvisible()   // make it invisible so we can measure it, but not show yet
                 text = getMediumExtendedDetails(mMedium)
-                onGlobalLayout {
-                    if (isAdded) {
-                        val realY = getExtendedDetailsY(height)
-                        if (realY > 0) {
-                            y = realY
-                            beVisibleIf(text.isNotEmpty())
-                            alpha = if (!mConfig.hideExtendedDetails || !mIsFullscreen) 1f else 0f
-                        }
-                    }
-                }
+                beVisibleIf(text.isNotEmpty())
+                alpha = if (!mConfig.hideExtendedDetails || !mIsFullscreen) 1f else 0f
+                (activity as? BaseViewerActivity)?.applyProperHorizontalInsets(this)
             }
         } else {
             binding.videoDetails.beGone()
@@ -573,21 +575,9 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
     }
 
     private fun initTimeHolder() {
-        var right = 0
-        var bottom = requireContext().navigationBarHeight
-        if (mConfig.bottomActions) {
-            bottom += resources.getDimension(R.dimen.bottom_actions_height).toInt()
-        }
-
-        if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE && activity?.hasNavBar() == true) {
-            right += requireActivity().navigationBarWidth
-        }
-
-        (mTimeHolder.layoutParams as RelativeLayout.LayoutParams).apply {
-            bottomMargin = bottom
-            rightMargin = right
-        }
-        mTimeHolder.beInvisibleIf(mIsFullscreen)
+        mTimeHolder.beGoneIf(mIsFullscreen)
+        mTimeHolder.alpha = if (mIsFullscreen) 0f else 1f
+        (activity as? BaseViewerActivity)?.applyProperHorizontalInsets(mTimeHolder)
     }
 
     private fun checkIfPanorama() {
@@ -609,10 +599,6 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
 
     override fun fullscreenToggled(isFullscreen: Boolean) {
         mIsFullscreen = isFullscreen
-        val newAlpha = if (isFullscreen) 0f else 1f
-        if (!mIsFullscreen) {
-            mTimeHolder.beVisible()
-        }
 
         mSeekBar.setOnSeekBarChangeListener(if (mIsFullscreen) null else this)
         arrayOf(
@@ -625,13 +611,18 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
             it.isClickable = !mIsFullscreen
         }
 
-        mTimeHolder.animate().alpha(newAlpha).start()
+        if (isFullscreen) {
+            mTimeHolder.fadeOut(DEFAULT_ANIMATION_DURATION)
+            binding.bottomActionsDummy.fadeOut(DEFAULT_ANIMATION_DURATION)
+        } else {
+            binding.bottomActionsDummy.beVisible()
+            mTimeHolder.fadeIn(DEFAULT_ANIMATION_DURATION)
+        }
+
         binding.videoDetails.apply {
             if (mStoredShowExtendedDetails && isVisible() && context != null && resources != null) {
-                animate().y(getExtendedDetailsY(height))
-
                 if (mStoredHideExtendedDetails) {
-                    animate().alpha(newAlpha).start()
+                    animate().alpha(if (isFullscreen) 0f else 1f).start()
                 }
             }
         }
@@ -651,37 +642,18 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
 
             val drawableId =
                 if (isSlow) R.drawable.ic_playback_speed_slow_vector else R.drawable.ic_playback_speed_vector
-            binding.bottomVideoTimeHolder.videoPlaybackSpeed
-                .setDrawablesRelativeWithIntrinsicBounds(
-                    AppCompatResources.getDrawable(
-                        requireContext(),
-                        drawableId
+            context?.let {
+                binding.bottomVideoTimeHolder.videoPlaybackSpeed
+                    .setDrawablesRelativeWithIntrinsicBounds(
+                        AppCompatResources.getDrawable(it, drawableId)
                     )
-                )
+            }
         }
 
         @SuppressLint("SetTextI18n")
         binding.bottomVideoTimeHolder.videoPlaybackSpeed.text =
             "${DecimalFormat("#.##").format(speed)}x"
         mExoPlayer?.setPlaybackSpeed(speed)
-    }
-
-    private fun getExtendedDetailsY(height: Int): Float {
-        val smallMargin =
-            context?.resources?.getDimension(org.fossify.commons.R.dimen.small_margin) ?: return 0f
-        val fullscreenOffset =
-            smallMargin + if (mIsFullscreen) 0 else requireContext().navigationBarHeight
-        var actionsHeight = 0f
-        if (!mIsFullscreen) {
-            if (binding.bottomVideoTimeHolder.root.children.any { isVisible }) {
-                actionsHeight += binding.bottomVideoTimeHolder.root.height
-            }
-
-            if (mConfig.bottomActions) {
-                actionsHeight += resources.getDimension(R.dimen.bottom_actions_height)
-            }
-        }
-        return requireContext().realScreenSize.y - height - actionsHeight - fullscreenOffset
     }
 
     private fun skip(forward: Boolean) {
@@ -702,12 +674,10 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
         }
 
         val curr = mExoPlayer!!.currentPosition
-        val newProgress =
+        var newPosition =
             if (forward) curr + FAST_FORWARD_VIDEO_MS else curr - FAST_FORWARD_VIDEO_MS
-        val roundProgress = Math.round(newProgress / 1000f)
-        val limitedProgress =
-            Math.max(Math.min(mExoPlayer!!.duration.toInt() / 1000, roundProgress), 0)
-        setPosition(limitedProgress)
+        newPosition = newPosition.coerceIn(0, maxOf(mExoPlayer!!.duration, 0))
+        setPosition(newPosition)
         if (!mIsPlaying) {
             togglePlayPause()
         }
@@ -715,15 +685,16 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
 
     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
         if (fromUser) {
+            val newPosition = progress.toLong()
             if (mExoPlayer != null) {
                 if (!mWasPlayerInited) {
-                    mPositionWhenInit = progress
+                    mPositionWhenInit = newPosition
                 }
-                setPosition(progress)
+                setPosition(newPosition)
             }
 
             if (mExoPlayer == null) {
-                mPositionAtPause = progress * 1000L
+                mPositionAtPause = newPosition
                 playVideo()
             }
         }
@@ -848,19 +819,19 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
         return currentPos != 0L && currentPos >= duration
     }
 
-    private fun setPosition(seconds: Int) {
-        mExoPlayer?.seekTo(seconds * 1000L)
-        mSeekBar.progress = seconds
-        mCurrTimeView.text = seconds.getFormattedDuration()
+    private fun setPosition(milliseconds: Long) {
+        mExoPlayer?.seekTo(milliseconds)
+        mSeekBar.progress = milliseconds.toInt()
+        mCurrTimeView.text = milliseconds.getFormattedDuration()
 
         if (!mIsPlaying) {
-            mPositionAtPause = mExoPlayer?.currentPosition ?: 0L
+            mPositionAtPause = milliseconds
         }
     }
 
     private fun setupVideoDuration() {
         ensureBackgroundThread {
-            mDuration = context?.getDuration(mMedium.path) ?: 0
+            mDuration = context?.getDuration(mMedium.path)?.times(1000L)?.coerceAtLeast(0L) ?: 0L
 
             activity?.runOnUiThread {
                 setupTimeHolder()
@@ -870,8 +841,8 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
     }
 
     private fun videoPrepared() {
-        if (mDuration == 0) {
-            mDuration = (mExoPlayer!!.duration / 1000).toInt()
+        if (mDuration == 0L) {
+            mDuration = mExoPlayer!!.duration
             setupTimeHolder()
             setPosition(mCurrTime)
 
@@ -880,7 +851,7 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
             }
         }
 
-        if (mPositionWhenInit != 0 && !mWasPlayerInited) {
+        if (mPositionWhenInit != 0L && !mWasPlayerInited) {
             setPosition(mPositionWhenInit)
             mPositionWhenInit = 0
         }
@@ -903,7 +874,7 @@ class VideoFragment : ViewPagerFragment(), TextureView.SurfaceTextureListener,
             return
         }
 
-        mCurrTime = (mExoPlayer!!.duration / 1000).toInt()
+        mCurrTime = mExoPlayer!!.duration
         if (listener?.videoEnded() == false && mConfig.loopVideos) {
             playVideo()
         } else {

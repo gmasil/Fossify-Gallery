@@ -134,14 +134,19 @@ android {
 
 detekt {
     baseline = file("detekt-baseline.xml")
+    config.setFrom("$rootDir/detekt.yml")
+    buildUponDefaultConfig = true
+    allRules = false
 }
 
 dependencies {
     implementation(libs.fossify.commons)
+    implementation(libs.androidx.print)
     implementation(libs.android.image.cropper)
     implementation(libs.exif)
     implementation(libs.android.gif.drawable)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.documentfile)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.sanselan)
     implementation(libs.androidphotofilters)
@@ -151,6 +156,7 @@ dependencies {
     implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.awebp)
     implementation(libs.apng)
+    implementation(libs.avif)
     implementation(libs.avif.integration)
     implementation(libs.jxl.integration)
     implementation(libs.okio)
@@ -166,4 +172,5 @@ dependencies {
 
     implementation(libs.bundles.room)
     ksp(libs.androidx.room.compiler)
+    detektPlugins(libs.compose.detekt)
 }

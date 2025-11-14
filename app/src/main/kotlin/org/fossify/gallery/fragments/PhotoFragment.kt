@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.PictureDrawable
@@ -18,8 +19,16 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.RelativeLayout
-import androidx.exifinterface.media.ExifInterface.*
+import androidx.core.graphics.drawable.toBitmapOrNull
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat.Type
+import androidx.core.view.updateLayoutParams
+import androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180
+import androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270
+import androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90
+import androidx.exifinterface.media.ExifInterface.ORIENTATION_TRANSPOSE
+import androidx.exifinterface.media.ExifInterface.ORIENTATION_TRANSVERSE
+import androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION
 import com.alexvasilkov.gestures.GestureController
 import com.alexvasilkov.gestures.State
 import com.bumptech.glide.Glide
@@ -37,26 +46,54 @@ import com.davemorrissey.labs.subscaleview.ImageDecoder
 import com.davemorrissey.labs.subscaleview.ImageRegionDecoder
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.github.penfeizhou.animation.apng.APNGDrawable
+import com.github.penfeizhou.animation.avif.AVIFDrawable
 import com.github.penfeizhou.animation.webp.WebPDrawable
 import com.squareup.picasso.Callback
 import com.squareup.picasso.Picasso
 import it.sephiroth.android.library.exif2.ExifInterface
 import org.apache.sanselan.common.byteSources.ByteSourceInputStream
 import org.apache.sanselan.formats.jpeg.JpegImageParser
-import org.fossify.commons.activities.BaseSimpleActivity
-import org.fossify.commons.extensions.*
+import org.fossify.commons.extensions.beGone
+import org.fossify.commons.extensions.beGoneIf
+import org.fossify.commons.extensions.beInvisible
+import org.fossify.commons.extensions.beVisible
+import org.fossify.commons.extensions.beVisibleIf
+import org.fossify.commons.extensions.fadeIn
+import org.fossify.commons.extensions.fadeOut
+import org.fossify.commons.extensions.getProperBackgroundColor
+import org.fossify.commons.extensions.getProperTextColor
+import org.fossify.commons.extensions.getRealPathFromURI
+import org.fossify.commons.extensions.isExternalStorageManager
+import org.fossify.commons.extensions.isPathOnOTG
+import org.fossify.commons.extensions.isVisible
+import org.fossify.commons.extensions.isWebP
+import org.fossify.commons.extensions.onGlobalLayout
+import org.fossify.commons.extensions.portrait
+import org.fossify.commons.extensions.realScreenSize
+import org.fossify.commons.extensions.toast
+import org.fossify.commons.helpers.DEFAULT_ANIMATION_DURATION
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.helpers.isRPlus
 import org.fossify.gallery.R
+import org.fossify.gallery.activities.BaseViewerActivity
 import org.fossify.gallery.activities.PhotoActivity
 import org.fossify.gallery.activities.PhotoVideoActivity
 import org.fossify.gallery.activities.ViewPagerActivity
 import org.fossify.gallery.adapters.PortraitPhotosAdapter
 import org.fossify.gallery.databinding.PagerPhotoItemBinding
 import org.fossify.gallery.extensions.config
-import org.fossify.gallery.extensions.saveRotatedImageToFile
+import org.fossify.gallery.extensions.getBottomActionsHeight
 import org.fossify.gallery.extensions.sendFakeClick
-import org.fossify.gallery.helpers.*
+import org.fossify.gallery.helpers.ColorModeHelper
+import org.fossify.gallery.helpers.HIGH_TILE_DPI
+import org.fossify.gallery.helpers.LOW_TILE_DPI
+import org.fossify.gallery.helpers.MAX_ZOOM_EQUALITY_TOLERANCE
+import org.fossify.gallery.helpers.MEDIUM
+import org.fossify.gallery.helpers.MyGlideImageDecoder
+import org.fossify.gallery.helpers.NORMAL_TILE_DPI
+import org.fossify.gallery.helpers.PicassoRegionDecoder
+import org.fossify.gallery.helpers.SHOULD_INIT_FRAGMENT
+import org.fossify.gallery.helpers.WEIRD_TILE_DPI
 import org.fossify.gallery.models.Medium
 import org.fossify.gallery.svg.SvgSoftwareLayerSetter
 import pl.droidsonroids.gif.InputSource
@@ -172,6 +209,14 @@ class PhotoFragment : ViewPagerFragment() {
             }
         }
 
+        ViewCompat.setOnApplyWindowInsetsListener(binding.photoHolder) { _, insets ->
+            val system = insets.getInsetsIgnoringVisibility(Type.systemBars())
+            binding.bottomActionsDummy.updateLayoutParams<ViewGroup.LayoutParams> {
+                height = resources.getBottomActionsHeight() + system.bottom
+            }
+            insets
+        }
+
         checkScreenDimensions()
         storeStateVariables()
         if (!mIsFragmentVisible && activity is PhotoActivity) {
@@ -211,7 +256,7 @@ class PhotoFragment : ViewPagerFragment() {
             }
         }
 
-        mIsFullscreen = requireActivity().window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_FULLSCREEN == View.SYSTEM_UI_FLAG_FULLSCREEN
+        mIsFullscreen = listener?.isFullScreen() == true
         loadImage()
         initExtendedDetails()
         mWasInit = true
@@ -318,7 +363,9 @@ class PhotoFragment : ViewPagerFragment() {
         super.setMenuVisibility(menuVisible)
         mIsFragmentVisible = menuVisible
         if (mWasInit) {
-            if (!mMedium.isGIF() && !mMedium.isWebP() && !mMedium.isApng()) {
+            val isNotAnimatedContent =
+                !mMedium.isGIF() && !mMedium.isApng() && !mMedium.isAvif() && !mMedium.isWebP()
+            if (isNotAnimatedContent) {
                 photoFragmentVisibilityChanged(menuVisible)
             }
         }
@@ -349,9 +396,11 @@ class PhotoFragment : ViewPagerFragment() {
 
     private fun photoFragmentVisibilityChanged(isVisible: Boolean) {
         if (isVisible) {
+            applyProperColorMode(binding.gesturesView.drawable)
             scheduleZoomableView()
         } else {
             hideZoomableView()
+            ColorModeHelper.resetColorMode(activity)
         }
     }
 
@@ -387,6 +436,7 @@ class PhotoFragment : ViewPagerFragment() {
                     mMedium.isGIF() -> loadGif()
                     mMedium.isSVG() -> loadSVG()
                     mMedium.isApng() -> loadAPNG()
+                    mMedium.isAvif() -> loadAVIF()
                     else -> loadBitmap()
                 }
             }
@@ -433,6 +483,18 @@ class PhotoFragment : ViewPagerFragment() {
         }
     }
 
+    private fun loadAVIF() {
+        if (context != null) {
+            val drawable = AVIFDrawable.fromFile(mMedium.path)
+            if (drawable.intrinsicWidth == 0 || drawable.intrinsicHeight == 0) {
+                loadBitmap()
+                return
+            }
+
+            binding.gesturesView.setImageDrawable(drawable)
+        }
+    }
+
     private fun loadBitmap(addZoomableView: Boolean = true) {
         if (context == null) {
             return
@@ -459,17 +521,21 @@ class PhotoFragment : ViewPagerFragment() {
             .priority(priority)
             .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
             .fitCenter()
-
-        if (mCurrentRotationDegrees != 0) {
-            options.transform(Rotate(mCurrentRotationDegrees))
-            options.diskCacheStrategy(DiskCacheStrategy.NONE)
-        }
+            .run {
+                if (mCurrentRotationDegrees != 0) {
+                    transform(Rotate(mCurrentRotationDegrees))
+                        .diskCacheStrategy(DiskCacheStrategy.NONE)
+                } else {
+                    this
+                }
+            }
 
         Glide.with(requireContext())
             .load(path)
             .apply(options)
             .listener(object : RequestListener<Drawable> {
                 override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                    resetColorModeIfVisible()
                     if (activity != null && !activity!!.isDestroyed && !activity!!.isFinishing) {
                         tryLoadingWithPicasso(addZoomableView)
                     }
@@ -483,6 +549,7 @@ class PhotoFragment : ViewPagerFragment() {
                     dataSource: DataSource,
                     isFirstResource: Boolean
                 ): Boolean {
+                    applyProperColorMode(resource)
                     val allowZoomingImages = context?.config?.allowZoomingImages ?: true
                     binding.gesturesView.controller.settings.isZoomEnabled = mMedium.isRaw() || mCurrentRotationDegrees != 0 || allowZoomingImages == false
                     if (mIsFragmentVisible && addZoomableView) {
@@ -512,6 +579,7 @@ class PhotoFragment : ViewPagerFragment() {
 
             picasso.into(binding.gesturesView, object : Callback {
                 override fun onSuccess() {
+                    applyProperColorMode(binding.gesturesView.drawable)
                     binding.gesturesView.controller.settings.isZoomEnabled =
                         mMedium.isRaw() || mCurrentRotationDegrees != 0 || context?.config?.allowZoomingImages == false
                     if (mIsFragmentVisible && addZoomableView) {
@@ -520,6 +588,7 @@ class PhotoFragment : ViewPagerFragment() {
                 }
 
                 override fun onError(e: Exception?) {
+                    resetColorModeIfVisible()
                     if (mMedium.path != mOriginalPath) {
                         mMedium.path = mOriginalPath
                         loadImage()
@@ -568,7 +637,6 @@ class PhotoFragment : ViewPagerFragment() {
             }
 
             binding.photoPortraitStripe.adapter = adapter
-            setupStripeBottomMargin()
 
             val coverIndex = getCoverImageIndex(paths)
             if (coverIndex != -1) {
@@ -601,14 +669,6 @@ class PhotoFragment : ViewPagerFragment() {
             paths.add("")
         }
         return paths
-    }
-
-    private fun setupStripeBottomMargin() {
-        var bottomMargin = requireContext().navigationBarHeight + resources.getDimension(org.fossify.commons.R.dimen.normal_margin).toInt()
-        if (requireContext().config.bottomActions) {
-            bottomMargin += resources.getDimension(R.dimen.bottom_actions_height).toInt()
-        }
-        (binding.photoPortraitStripeWrapper.layoutParams as RelativeLayout.LayoutParams).bottomMargin = bottomMargin
     }
 
     private fun getCoverImageIndex(paths: ArrayList<String>): Int {
@@ -842,17 +902,15 @@ class PhotoFragment : ViewPagerFragment() {
 
     private fun initExtendedDetails() {
         if (requireContext().config.showExtendedDetails) {
-            binding.photoDetails.apply {
-                beInvisible()   // make it invisible so we can measure it, but not show yet
-                text = getMediumExtendedDetails(mMedium)
-                onGlobalLayout {
-                    if (isAdded) {
-                        val realY = getExtendedDetailsY(height)
-                        if (realY > 0) {
-                            y = realY
-                            beVisibleIf(text.isNotEmpty())
-                            alpha = if (!requireContext().config.hideExtendedDetails || !mIsFullscreen) 1f else 0f
-                        }
+            ensureBackgroundThread {
+                val details = getMediumExtendedDetails(mMedium)
+                activity?.runOnUiThread {
+                    binding.photoDetails.apply {
+                        text = details
+                        beVisibleIf(text.isNotEmpty())
+                        val hideExtendedDetails = context?.config?.hideExtendedDetails == true
+                        alpha = if (!hideExtendedDetails || !mIsFullscreen) 1f else 0f
+                        (activity as? BaseViewerActivity)?.applyProperHorizontalInsets(this)
                     }
                 }
             }
@@ -884,12 +942,16 @@ class PhotoFragment : ViewPagerFragment() {
         binding.apply {
             photoDetails.apply {
                 if (mStoredShowExtendedDetails && isVisible() && context != null && resources != null) {
-                    animate().y(getExtendedDetailsY(height))
-
                     if (mStoredHideExtendedDetails) {
                         animate().alpha(if (isFullscreen) 0f else 1f).start()
                     }
                 }
+            }
+
+            if (isFullscreen) {
+                bottomActionsDummy.fadeOut(DEFAULT_ANIMATION_DURATION)
+            } else {
+                bottomActionsDummy.beVisible()
             }
 
             if (mIsPanorama) {
@@ -903,10 +965,18 @@ class PhotoFragment : ViewPagerFragment() {
         }
     }
 
-    private fun getExtendedDetailsY(height: Int): Float {
-        val smallMargin = context?.resources?.getDimension(org.fossify.commons.R.dimen.small_margin) ?: return 0f
-        val fullscreenOffset = smallMargin + if (mIsFullscreen) 0 else requireContext().navigationBarHeight
-        val actionsHeight = if (requireContext().config.bottomActions && !mIsFullscreen) resources.getDimension(R.dimen.bottom_actions_height) else 0f
-        return requireContext().realScreenSize.y - height - actionsHeight - fullscreenOffset
+    private fun applyProperColorMode(resource: Drawable?) {
+        if (mIsFragmentVisible && activity != null) {
+            ColorModeHelper.setColorModeForImage(
+                activity = requireActivity(),
+                bitmap = (resource as? BitmapDrawable)?.bitmap ?: resource?.toBitmapOrNull()
+            )
+        }
+    }
+
+    private fun resetColorModeIfVisible() {
+        if (mIsFragmentVisible) {
+            ColorModeHelper.resetColorMode(activity)
+        }
     }
 }

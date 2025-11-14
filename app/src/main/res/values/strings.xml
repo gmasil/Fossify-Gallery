@@ -25,6 +25,7 @@
     <string name="change_orientation">Change orientation</string>
     <string name="force_portrait">Force portrait</string>
     <string name="force_landscape">Force landscape</string>
+    <string name="force_landscape_reverse">Force landscape (reverse)</string>
     <string name="use_default_orientation">Use default orientation</string>
     <string name="fix_date_taken">Fix Date Taken value</string>
     <string name="fixing">Fixing…</string>
@@ -107,6 +108,7 @@
     <string name="no_image_editor_found">No image editor found</string>
     <string name="no_video_editor_found">No video editor found</string>
     <string name="unknown_file_location">Unknown file location</string>
+    <string name="overwrite_original">Overwrite original</string>
     <string name="error_saving_file">Could not overwrite the source file</string>
     <string name="rotate_left">Rotate left</string>
     <string name="rotate_right">Rotate right</string>
