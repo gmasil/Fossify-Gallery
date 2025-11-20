@@ -56,8 +56,39 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         return targetFile
     }
 
+    fun reduceFileSize(filePath: String, replace: Boolean) {
+        val targetFile = filePath.take(filePath.lastIndexOf(".")) + "_reduced.jpg"
+        // load image
+        val bmOptions = BitmapFactory.Options()
+        bmOptions.inJustDecodeBounds = false
+        val image = BitmapFactory.decodeFile(filePath, bmOptions)
+        // save file, re-encode as JPG
+        FileOutputStream(targetFile).use { out ->
+            image.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        }
+        File(targetFile).setLastModified(File(filePath).lastModified())
+        val isNewFileSmaller = File(targetFile).length() < File(filePath).length()
+        if (!isNewFileSmaller) {
+            File(targetFile).delete()
+        } else if(replace) {
+            val replaceFile = filePath.take(filePath.lastIndexOf(".")) + ".jpg"
+            File(filePath).delete()
+            File(targetFile).renameTo(File(replaceFile))
+        }
+    }
+
     private fun isNormalImageFile(filePath: String): Boolean {
         return listOf("png", "jpg", "jpeg", "bmp").any { filePath.lowercase().endsWith(it) }
+    }
+
+    fun isAnimatedWebp(filePath: String): Boolean {
+        val imageHandler: AnimatedImageHandler = WebpImageHandler(filePath, applicationContext)
+        return imageHandler.countFrames() != 1
+    }
+
+    fun isAnimatedGif(filePath: String): Boolean {
+        val imageHandler: AnimatedImageHandler = GifImageHandler(filePath, applicationContext)
+        return imageHandler.countFrames() != 1
     }
 
     private fun convertWebpToGif(filePath: String): File {

@@ -124,6 +124,37 @@ fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
     }
 }
 
+fun Activity.reduceMediaSize(mediaList: List<Medium>, replace: Boolean) {
+    val converter = AnimatedImageConverter(this)
+    ensureBackgroundThread {
+        var i = 0
+        for (medium in mediaList) {
+            if(medium.path.lowercase().endsWith(".webp")) {
+                // check if it is a single image webp
+                if(!converter.isAnimatedWebp(medium.path)){
+                    converter.reduceFileSize(medium.path, replace)
+                    i++
+                }
+            } else if(medium.path.lowercase().endsWith(".gif")) {
+                // check if it is a single image gif
+                if(!converter.isAnimatedGif(medium.path)){
+                    converter.reduceFileSize(medium.path, replace)
+                    i++
+                }
+            } else if(listOf(".png", ".jpg", ".jpeg", ".bmp").stream().anyMatch { medium.path.lowercase().endsWith(it) }) {
+                converter.reduceFileSize(medium.path, replace)
+                i++
+            } else if(listOf(".mp4", ".webm").stream().anyMatch { medium.path.lowercase().endsWith(it) }) {
+                // nothing to do
+            } else {
+                val fileType = medium.path.substring(medium.path.lastIndexOf("."), medium.path.length)
+                applicationContext.toast("Unsupported file type: $fileType")
+            }
+        }
+        applicationContext.toast("Reduced size of $i files")
+    }
+}
+
 fun Activity.launchCamera() {
     val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
     launchActivityIntent(intent)

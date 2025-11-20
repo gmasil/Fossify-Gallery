@@ -115,6 +115,7 @@ import org.fossify.gallery.extensions.mediaDB
 import org.fossify.gallery.extensions.movePathsInRecycleBin
 import org.fossify.gallery.extensions.openEditor
 import org.fossify.gallery.extensions.openPath
+import org.fossify.gallery.extensions.reduceMediaSize
 import org.fossify.gallery.extensions.restoreRecycleBinPath
 import org.fossify.gallery.extensions.saveRotatedImageToFile
 import org.fossify.gallery.extensions.setAs
@@ -305,6 +306,8 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
                 findItem(R.id.menu_convert_mp4).isVisible = true
                 findItem(R.id.menu_convert_webp).isVisible = true
                 findItem(R.id.menu_convert_gif).isVisible = true
+                findItem(R.id.menu_convert_reduce_size).isVisible = true
+                findItem(R.id.menu_convert_reduce_size_replace).isVisible = true
                 findItem(R.id.menu_rename).isVisible = visibleBottomActions and BOTTOM_ACTION_RENAME == 0 && !currentMedium.getIsInRecycleBin()
                 findItem(R.id.menu_rotate).isVisible = currentMedium.isImage() && visibleBottomActions and BOTTOM_ACTION_ROTATE == 0
                 findItem(R.id.menu_set_as).isVisible = visibleBottomActions and BOTTOM_ACTION_SET_AS == 0
@@ -373,6 +376,8 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
                 R.id.menu_convert_mp4 -> convertMedia(listOf(getCurrentMedium()!!), "mp4")
                 R.id.menu_convert_webp -> convertMedia(listOf(getCurrentMedium()!!), "webp")
                 R.id.menu_convert_gif -> convertMedia(listOf(getCurrentMedium()!!), "gif")
+                R.id.menu_convert_reduce_size -> reduceMediaSize(listOf(getCurrentMedium()!!), false)
+                R.id.menu_convert_reduce_size_replace -> reduceMediaSize(listOf(getCurrentMedium()!!), true)
                 R.id.menu_properties -> showProperties()
                 R.id.menu_show_on_map -> showFileOnMap(getCurrentPath())
                 R.id.menu_rotate_right -> rotateImage(90)

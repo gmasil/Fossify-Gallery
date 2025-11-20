@@ -108,6 +108,12 @@
             <item
                 android:id="@+id/cab_convert_gif"
                 android:title="@string/convert_gif" />
+            <item
+                android:id="@+id/cab_convert_reduce_size"
+                android:title="@string/convert_reduce_size" />
+            <item
+                android:id="@+id/cab_convert_reduce_size_replace"
+                android:title="@string/convert_reduce_size_replace" />
         </menu>
     </item>
     <item

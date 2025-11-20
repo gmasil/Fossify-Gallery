@@ -67,6 +67,7 @@ import org.fossify.gallery.extensions.launchResizeMultipleImagesDialog
 import org.fossify.gallery.extensions.loadImage
 import org.fossify.gallery.extensions.openEditor
 import org.fossify.gallery.extensions.openPath
+import org.fossify.gallery.extensions.reduceMediaSize
 import org.fossify.gallery.extensions.rescanFolderMedia
 import org.fossify.gallery.extensions.restoreRecycleBinPaths
 import org.fossify.gallery.extensions.saveRotatedImageToFile
@@ -198,6 +199,7 @@ class MediaAdapter(
             findItem(R.id.cab_convert_mp4).isVisible = true
             findItem(R.id.cab_convert_webp).isVisible = true
             findItem(R.id.cab_convert_gif).isVisible = true
+            findItem(R.id.cab_convert_reduce_size).isVisible = true
             findItem(R.id.cab_set_as).isVisible = isOneItemSelected
             findItem(R.id.cab_resize).isVisible = canResize(selectedItems)
             findItem(R.id.cab_confirm_selection).isVisible = isAGetIntent && allowMultiplePicks && selectedKeys.isNotEmpty()
@@ -219,9 +221,11 @@ class MediaAdapter(
             R.id.cab_properties -> showProperties()
             R.id.cab_rename -> checkMediaManagementAndRename()
             R.id.cab_edit -> editFile()
-            R.id.cab_convert_mp4 -> convertFiles("mp4")
-            R.id.cab_convert_webp -> convertFiles("webp")
-            R.id.cab_convert_gif -> convertFiles("gif")
+            R.id.cab_convert_mp4 -> activity.convertMedia(getSelectedItems(), "mp4")
+            R.id.cab_convert_webp -> activity.convertMedia(getSelectedItems(), "webp")
+            R.id.cab_convert_gif -> activity.convertMedia(getSelectedItems(), "gif")
+            R.id.cab_convert_reduce_size -> activity.reduceMediaSize(getSelectedItems(), false)
+            R.id.cab_convert_reduce_size_replace -> activity.reduceMediaSize(getSelectedItems(), true)
             R.id.cab_hide -> toggleFileVisibility(true)
             R.id.cab_unhide -> toggleFileVisibility(false)
             R.id.cab_add_to_favorites -> toggleFavorites(true)
@@ -333,10 +337,10 @@ class MediaAdapter(
         activity.openEditor(path)
     }
 
-    private fun convertFiles(targetType: String) {
-        val paths = getSelectedItems()
-        activity.convertMedia(paths, targetType)
-    }
+//    private fun convertFiles(targetType: String) {
+//        val paths = getSelectedItems()
+//        activity.convertMedia(paths, targetType)
+//    }
 
     private fun openPath() {
         val path = getFirstSelectedItemPath() ?: return
