@@ -56,7 +56,61 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         return targetFile
     }
 
-    fun reduceFileSize(filePath: String, replace: Boolean) {
+    fun reduceFileSize(filePath: String, replace: Boolean): Boolean {
+        if(filePath.lowercase().endsWith(".webp")) {
+            // check if it is a single image webp
+            if(isAnimatedWebp(filePath)){
+                return false
+            }
+            return reduceStillImageSize(filePath, replace)
+        } else if(filePath.lowercase().endsWith(".gif")) {
+            // check if it is a single image gif
+            if(isAnimatedGif(filePath)){
+                return false
+            }
+            return reduceStillImageSize(filePath, replace)
+        } else if (isNormalImageFile(filePath)) {
+            return reduceStillImageSize(filePath, replace)
+        } else if(listOf(".mp4", ".webm").any { filePath.lowercase().endsWith(it) }) {
+            return reduceVideoSize(filePath, replace)
+        } else {
+            val fileType = filePath.substring(filePath.lastIndexOf("."), filePath.length)
+            applicationContext.toast("Unsupported file type: $fileType")
+            return false
+        }
+    }
+
+    fun reduceVideoSize(filePath: String, replace: Boolean): Boolean {
+        val targetFolder = applicationContext.cacheDir.resolve("converter")
+        targetFolder.deleteRecursively()
+        targetFolder.mkdirs()
+        val targetFile = File(filePath.take(filePath.lastIndexOf(".")) + if(replace) ".mp4" else "_reduced.mp4")
+        if(!replace && targetFile.exists()) {
+            return false
+        }
+        val tmpFile = File(targetFolder, "output.mp4")
+        val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx265 -crf 28 -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map_metadata 0 -map_metadata:s:v 0:s:v \"${tmpFile.absolutePath}\""
+        Log.i(NAME, "ffmpeg $ffmpegCommand")
+        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
+        if(!ReturnCode.isSuccess(session.returnCode)) {
+            return false
+        }
+        // check if new file is smaller
+        Log.i(NAME, "Old size ${File(filePath).length()}, new size ${tmpFile.length()}")
+        if(tmpFile.length() >= File(filePath).length()) {
+            tmpFile.delete()
+            return false
+        }
+        // target file might be input filePath, so store lastModified first
+        val lastModified = File(filePath).lastModified()
+        targetFile.delete()
+        tmpFile.copyTo(targetFile)
+        tmpFile.delete()
+        targetFile.setLastModified(lastModified)
+        return true
+    }
+
+    fun reduceStillImageSize(filePath: String, replace: Boolean): Boolean {
         val targetFile = filePath.take(filePath.lastIndexOf(".")) + "_reduced.jpg"
         // load image
         val bmOptions = BitmapFactory.Options()
@@ -66,19 +120,25 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         FileOutputStream(targetFile).use { out ->
             image.compress(Bitmap.CompressFormat.JPEG, 90, out)
         }
-        File(targetFile).setLastModified(File(filePath).lastModified())
+        val lastModified = File(filePath).lastModified()
         val isNewFileSmaller = File(targetFile).length() < File(filePath).length()
         if (!isNewFileSmaller) {
             File(targetFile).delete()
+            return false
         } else if(replace) {
             val replaceFile = filePath.take(filePath.lastIndexOf(".")) + ".jpg"
             File(filePath).delete()
-            File(targetFile).renameTo(File(replaceFile))
+            File(targetFile).copyTo(File(replaceFile))
+            File(targetFile).delete()
+            File(replaceFile).setLastModified(lastModified)
+        } else {
+            File(targetFile).setLastModified(lastModified)
         }
+        return true
     }
 
     private fun isNormalImageFile(filePath: String): Boolean {
-        return listOf("png", "jpg", "jpeg", "bmp").any { filePath.lowercase().endsWith(it) }
+        return listOf(".png", ".jpg", ".jpeg", ".bmp").any { filePath.lowercase().endsWith(it) }
     }
 
     fun isAnimatedWebp(filePath: String): Boolean {
@@ -256,7 +316,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
     }
 
     fun convertToVideoInSameFolder(filePath: String): Boolean {
-        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".mp4"
         if (File(targetFile).exists()) {
             return true;
         }
@@ -274,7 +334,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
     }
 
     fun convertToWebpInSameFolder(filePath: String): Boolean {
-        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".webp"
+        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".webp"
         if (File(targetFile).exists()) {
             return true
         }

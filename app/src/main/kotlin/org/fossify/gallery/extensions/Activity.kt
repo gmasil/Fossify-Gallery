@@ -1,8 +1,12 @@
 package org.fossify.gallery.extensions
 
 import android.app.Activity
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.ContentProviderOperation
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
@@ -18,7 +22,6 @@ import android.provider.MediaStore.Files
 import android.provider.MediaStore.Images
 import android.provider.Settings
 import android.util.DisplayMetrics
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.exifinterface.media.ExifInterface
 import com.bumptech.glide.Glide
@@ -125,33 +128,51 @@ fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
 }
 
 fun Activity.reduceMediaSize(mediaList: List<Medium>, replace: Boolean) {
+
+    val notificationId = 100
+    val notificationChannelId = "GALLERY_CONVERT_CHANNEL"
+    val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    notificationManager.deleteNotificationChannel(notificationChannelId);
+
+    val channel = NotificationChannel(
+        notificationChannelId,
+        "Gallery Convert Channel",
+        NotificationManager.IMPORTANCE_LOW
+    )
+    channel.description = "Gallery Convert Channel Progress Notification"
+    notificationManager.createNotificationChannel(channel)
+
+    val notificationBuilder = Notification.Builder(applicationContext, notificationChannelId)
+    notificationBuilder.setOngoing(true)
+                       .setSmallIcon(R.drawable.ic_launcher_foreground)
+                       .setContentTitle("Reducing file size")
+                       .setContentText("Processing...")
+                       .setProgress(100, 0, false)
+
+    var notification = notificationBuilder.build()
+    notificationManager.notify(notificationId, notification)
+
     val converter = AnimatedImageConverter(this)
     ensureBackgroundThread {
         var i = 0
+        var reduced = 0
+        var currentPercentage = 0
         for (medium in mediaList) {
-            if(medium.path.lowercase().endsWith(".webp")) {
-                // check if it is a single image webp
-                if(!converter.isAnimatedWebp(medium.path)){
-                    converter.reduceFileSize(medium.path, replace)
-                    i++
-                }
-            } else if(medium.path.lowercase().endsWith(".gif")) {
-                // check if it is a single image gif
-                if(!converter.isAnimatedGif(medium.path)){
-                    converter.reduceFileSize(medium.path, replace)
-                    i++
-                }
-            } else if(listOf(".png", ".jpg", ".jpeg", ".bmp").stream().anyMatch { medium.path.lowercase().endsWith(it) }) {
-                converter.reduceFileSize(medium.path, replace)
-                i++
-            } else if(listOf(".mp4", ".webm").stream().anyMatch { medium.path.lowercase().endsWith(it) }) {
-                // nothing to do
-            } else {
-                val fileType = medium.path.substring(medium.path.lastIndexOf("."), medium.path.length)
-                applicationContext.toast("Unsupported file type: $fileType")
+            if(converter.reduceFileSize(medium.path, replace)){
+                reduced++
             }
+            i++
+            currentPercentage = (i*100)/mediaList.size
+            notificationBuilder.setProgress(100, currentPercentage, false)
+            notificationBuilder.setContentText("Processing $i/${mediaList.size}...")
+            notification = notificationBuilder.build()
+            notificationManager.notify(notificationId, notification)
         }
-        applicationContext.toast("Reduced size of $i files")
+        notificationBuilder.setProgress(100, 100, false)
+        notificationBuilder.setContentText("Done. Reduced size of $reduced/$i files")
+        notification = notificationBuilder.build()
+        notificationManager.notify(notificationId, notification)
     }
 }
 
