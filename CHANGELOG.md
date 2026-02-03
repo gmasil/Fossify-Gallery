@@ -6,6 +6,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-02-02
+### Changed
+- Videos now open in the in-app player; use the "Open with" option for other apps ([#774])
+- Updated translations
+
+### Fixed
+- Fixed double-tap to zoom gesture for WebP images (again) ([#363])
+
+## [1.11.0] - 2026-01-30
+### Added
+- Added support for custom fonts
+- Added option to toggle Ultra HDR rendering (Android 14+) ([#564])
+- Long press gesture to play videos at 2x speed in separate video player ([#830])
+
+### Changed
+- Mute button is now disabled for videos without an audio track ([#876])
+- Updated translations
+
+### Fixed
+- Fixed issue with separate video player not respecting paused state when seeking ([#831])
+- Fixed misplacement of extended information during slideshow ([#800])
+- Fixed double-tap to zoom for WebP images ([#363])
+
+## [1.10.0] - 2025-12-16
+### Added
+- Long press gesture to play videos at 2x speed ([#666])
+
+### Changed
+- Player now respects play/pause state when seeking
+- Updated translations
+
+### Fixed
+- Fixed opening JXL files from other apps ([#568])
+
+## [1.9.1] - 2025-11-25
+### Changed
+- Updated translations
+
+### Fixed
+- Fixed crash in editor when launched from other apps ([#786])
+
 ## [1.9.0] - 2025-11-08
 ### Changed
 - Restored ability to show/hide notch area ([#749])
@@ -214,6 +255,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#275]: https://github.com/FossifyOrg/Gallery/issues/275
 [#325]: https://github.com/FossifyOrg/Gallery/issues/325
 [#362]: https://github.com/FossifyOrg/Gallery/issues/362
+[#363]: https://github.com/FossifyOrg/Gallery/issues/363
 [#365]: https://github.com/FossifyOrg/Gallery/issues/365
 [#375]: https://github.com/FossifyOrg/Gallery/issues/375
 [#379]: https://github.com/FossifyOrg/Gallery/issues/379
@@ -223,14 +265,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#475]: https://github.com/FossifyOrg/Gallery/issues/475
 [#525]: https://github.com/FossifyOrg/Gallery/issues/525
 [#529]: https://github.com/FossifyOrg/Gallery/issues/529
+[#564]: https://github.com/FossifyOrg/Gallery/issues/564
 [#565]: https://github.com/FossifyOrg/Gallery/issues/565
 [#567]: https://github.com/FossifyOrg/Gallery/issues/567
+[#568]: https://github.com/FossifyOrg/Gallery/issues/568
 [#621]: https://github.com/FossifyOrg/Gallery/issues/621
 [#622]: https://github.com/FossifyOrg/Gallery/issues/622
 [#630]: https://github.com/FossifyOrg/Gallery/issues/630
 [#642]: https://github.com/FossifyOrg/Gallery/issues/642
 [#648]: https://github.com/FossifyOrg/Gallery/issues/648
 [#659]: https://github.com/FossifyOrg/Gallery/issues/659
+[#666]: https://github.com/FossifyOrg/Gallery/issues/666
 [#718]: https://github.com/FossifyOrg/Gallery/issues/718
 [#734]: https://github.com/FossifyOrg/Gallery/issues/734
 [#743]: https://github.com/FossifyOrg/Gallery/issues/743
@@ -239,8 +284,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#752]: https://github.com/FossifyOrg/Gallery/issues/752
 [#754]: https://github.com/FossifyOrg/Gallery/issues/754
 [#759]: https://github.com/FossifyOrg/Gallery/issues/759
+[#774]: https://github.com/FossifyOrg/Gallery/issues/774
+[#786]: https://github.com/FossifyOrg/Gallery/issues/786
+[#800]: https://github.com/FossifyOrg/Gallery/issues/800
+[#830]: https://github.com/FossifyOrg/Gallery/issues/830
+[#831]: https://github.com/FossifyOrg/Gallery/issues/831
+[#876]: https://github.com/FossifyOrg/Gallery/issues/876
 
-[Unreleased]: https://github.com/FossifyOrg/Gallery/compare/1.9.0...HEAD
+[Unreleased]: https://github.com/FossifyOrg/Gallery/compare/1.12.0...HEAD
+[1.12.0]: https://github.com/FossifyOrg/Gallery/compare/1.11.0...1.12.0
+[1.11.0]: https://github.com/FossifyOrg/Gallery/compare/1.10.0...1.11.0
+[1.10.0]: https://github.com/FossifyOrg/Gallery/compare/1.9.1...1.10.0
+[1.9.1]: https://github.com/FossifyOrg/Gallery/compare/1.9.0...1.9.1
 [1.9.0]: https://github.com/FossifyOrg/Gallery/compare/1.8.1...1.9.0
 [1.8.1]: https://github.com/FossifyOrg/Gallery/compare/1.8.0...1.8.1
 [1.8.0]: https://github.com/FossifyOrg/Gallery/compare/1.7.0...1.8.0

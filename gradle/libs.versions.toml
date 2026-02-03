@@ -1,27 +1,27 @@
 [versions]
 #jetbrains
-kotlin = "2.2.21"
+kotlin = "2.3.0"
 #KSP
-ksp = "2.3.2"
+ksp = "2.3.5"
 #Detekt
 detekt = "1.23.8"
-detektCompose = "0.4.27"
+detektCompose = "0.4.28"
 #AndroidX
 androidx-print = "1.1.0"
-androidx-swiperefreshlayout = "1.1.0"
+androidx-swiperefreshlayout = "1.2.0"
 androidx-constraintlayout = "2.2.1"
 androidx-documentfile = "1.1.0"
 #exif
 exif = "1.0.1"
 #Room
-room = "2.8.3"
+room = "2.8.4"
 #Fossify
-commons = "5.7.3"
+commons = "6.1.0"
 #Gradle4
 gradlePlugins-agp = "8.13.1"
 #Other
-androidGifDrawable = "1.2.29"
-androidImageCropper = "4.6.0"
+androidGifDrawable = "1.2.30"
+androidImageCropper = "4.7.0"
 animationAndroid = "3.0.5"
 glideCompiler = "5.0.5"
 zjupureWebpdecoder = "2.7.4.16.0"
@@ -30,9 +30,9 @@ gestureviews = "e706487a14"
 androidsvgAar = "1.4"
 androidphotofilters = "193f2ae509"
 sanselan = "0.97-incubator"
-media3Exoplayer = "1.8.0"
-okhttp = "5.3.0"
-okio = "3.16.2"
+media3Exoplayer = "1.9.1"
+okhttp = "5.3.2"
+okio = "3.16.4"
 picasso = "2.71828"
 smart-exception = "0.2.1"
 subsamplingScaleImageView = "d705c3c4ad"
