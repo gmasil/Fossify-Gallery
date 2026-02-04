@@ -149,7 +149,8 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.sanselan)
-    implementation(libs.androidphotofilters)
+//    implementation(libs.androidphotofilters)
+    implementation(files("libs/photofilterssdk-release.aar"))
     implementation(libs.androidsvg.aar)
     implementation(libs.gestureviews)
     implementation(libs.subsamplingscaleimageview)
@@ -163,7 +164,7 @@ dependencies {
     implementation(libs.picasso) {
         exclude(group = "com.squareup.okhttp3", module = "okhttp")
     }
-    implementation(files("libs/ffmpeg-kit-full-gpl-6.0-2.aar"))
+    implementation(files("libs/ffmpeg-kit-6.1.1.aar"))
     implementation(libs.arthenica.smart.exception)
     compileOnly(libs.okhttp)
 
