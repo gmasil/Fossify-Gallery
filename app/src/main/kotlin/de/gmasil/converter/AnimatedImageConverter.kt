@@ -4,16 +4,14 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
-import androidx.core.util.Consumer
 import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.FFmpegSession
 import com.arthenica.ffmpegkit.FFmpegSessionCompleteCallback
 import com.arthenica.ffmpegkit.FFprobeKit
 import com.arthenica.ffmpegkit.FFprobeSession
 import com.arthenica.ffmpegkit.ReturnCode
-import com.arthenica.ffmpegkit.Statistics
 import com.arthenica.ffmpegkit.StatisticsCallback
 import de.gmasil.converter.api.AnimatedImageHandler
+import de.gmasil.converter.api.ConverterProgress
 import de.gmasil.converter.impl.GifImageHandler
 import de.gmasil.converter.impl.WebpImageHandler
 import org.fossify.commons.extensions.toast
@@ -30,15 +28,15 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         const val NAME = "AnimatedImageConverter"
     }
 
-    fun handleMediaForSharing(filePath: String): File {
+    fun handleMediaForSharing(filePath: String, converterProgress: ConverterProgress?): File {
         if (filePath.lowercase().endsWith(".webp")) {
-            return convertWebpToGif(filePath)
+            return convertWebpToGif(filePath, converterProgress)
         } else if(filePath.lowercase().endsWith(".mp4")) {
             applicationContext.toast("Converting to gif...")
-            return convertVideoToGif(filePath)
+            return convertVideoToGif(filePath, converterProgress)
         } else if(filePath.lowercase().endsWith(".webm")) {
             applicationContext.toast("Converting to gif...")
-            return convertVideoToGif(filePath)
+            return convertVideoToGif(filePath, converterProgress)
         } else if(isNormalImageFile(filePath)) {
             return ensureSharableFileSize(filePath)
         } else {
@@ -63,7 +61,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         return targetFile
     }
 
-    fun reduceFileSize(filePath: String, replace: Boolean, converterProgress: Consumer<Float>?): Boolean {
+    fun reduceFileSize(filePath: String, replace: Boolean, converterProgress: ConverterProgress?): Boolean {
         if(filePath.lowercase().endsWith(".webp")) {
             // check if it is a single image webp
             if(isAnimatedWebp(filePath)){
@@ -87,7 +85,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
     }
 
-    fun reduceVideoSize(filePath: String, replace: Boolean, converterProgress: Consumer<Float>?): Boolean {
+    fun reduceVideoSize(filePath: String, replace: Boolean, converterProgress: ConverterProgress?): Boolean {
         val targetFolder = applicationContext.cacheDir.resolve("converter")
         targetFolder.deleteRecursively()
         targetFolder.mkdirs()
@@ -101,7 +99,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
 
         val totalFrames = getTotalFrames(filePath)
 
-        if(!execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress)) {
+        if(!execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress, "Converting")) {
             return false
         }
         // check if new file is smaller
@@ -119,41 +117,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         return true
     }
 
-    fun execFfmpegWithProgress(ffmpegCommand: String, totalFrames: Int, converterProgress: Consumer<Float>?): Boolean {
-        if(converterProgress == null) {
-            val session = FFmpegKit.execute(ffmpegCommand)
-            return ReturnCode.isSuccess(session.returnCode)
-        } else {
-            val ffmpegCompletable = CompletableFuture<Boolean>()
-            val completeCallback = FFmpegSessionCompleteCallback{ session ->
-                converterProgress.accept(100.0f)
-                ffmpegCompletable.complete(ReturnCode.isSuccess(session.returnCode))
-            }
-            val statisticsCallback = StatisticsCallback { statistics ->
-                converterProgress.accept(statistics.videoFrameNumber / totalFrames.toFloat() * 100.0f)
-            }
-            FFmpegKit.executeAsync(ffmpegCommand, completeCallback, null, statisticsCallback)
-            return ffmpegCompletable.get()
-        }
-    }
-    fun getTotalFrames(filePath: String): Int {
-        var session: FFprobeSession = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
-        if(ReturnCode.isSuccess(session.returnCode)) {
-            if(session.logsAsString?.length != 0) {
-                try {
-                    return session.logsAsString.toInt()
-                } catch (e: NumberFormatException) {
-                    return -1
-                }
-            }
-        }
-        session = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
-        try {
-            return session.logsAsString.toInt()
-        } catch (e: NumberFormatException) {
-            return -1
-        }
-    }
+
 
     fun reduceStillImageSize(filePath: String, replace: Boolean): Boolean {
         val targetFile = filePath.take(filePath.lastIndexOf(".")) + "_reduced.jpg"
@@ -196,7 +160,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         return imageHandler.countFrames() != 1
     }
 
-    private fun convertWebpToGif(filePath: String): File {
+    private fun convertWebpToGif(filePath: String, converterProgress: ConverterProgress?): File {
         val imageHandler: AnimatedImageHandler = WebpImageHandler(filePath, applicationContext)
         val targetFolder = applicationContext.cacheDir.resolve("converter").absolutePath
         val frameCount = imageHandler.countFrames()
@@ -204,12 +168,12 @@ class AnimatedImageConverter(private val applicationContext: Context) {
             // animated
             applicationContext.toast("Converting to gif...")
             Log.i(NAME, "Extracting frames from '$filePath'...")
-            val totalDelay = extractImages(imageHandler, targetFolder)
+            val totalDelay = extractImages(imageHandler, targetFolder, converterProgress)
             Log.i(NAME, "Total delay: $totalDelay, frames: $frameCount")
             val videoTargetFile = "${targetFolder}/output.mp4"
             val gifTargetFile = "${targetFolder}/output.gif"
-            if (createVideoFromImagesInFolder(targetFolder, videoTargetFile, totalDelay, frameCount)) {
-                if (convertVideoToGif(videoTargetFile, gifTargetFile)) {
+            if (createVideoFromImagesInFolder(targetFolder, videoTargetFile, totalDelay, frameCount, converterProgress)) {
+                if (convertVideoToGif(videoTargetFile, gifTargetFile, converterProgress)) {
                     return File(gifTargetFile)
                 } else {
                     throw IllegalStateException("Error while converting to gif")
@@ -219,7 +183,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
             }
         } else if (frameCount == 1) {
             // not animated
-            extractImages(imageHandler, targetFolder)
+            extractImages(imageHandler, targetFolder, converterProgress)
             // return the only extracted image as png
             return File("$targetFolder/${"0".padStart(FILE_PADDING, '0')}.png")
         } else {
@@ -227,7 +191,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
     }
 
-    private fun extractImages(imageHandler: AnimatedImageHandler, targetFolder: String): Int {
+    private fun extractImages(imageHandler: AnimatedImageHandler, targetFolder: String, converterProgress: ConverterProgress?): Int {
         // prepare folder structure
         File(targetFolder).deleteRecursively();
         File(targetFolder).mkdirs()
@@ -247,6 +211,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
             }
             // select next bitmap
             imageHandler.advanceFrame()
+            converterProgress?.accept(i.toFloat() / frameCount.toFloat() * 100.0f, "Extracting")
         }
         return totalDelay
     }
@@ -259,7 +224,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         stream.close()
     }
 
-    private fun createVideoFromImagesInFolder(folder: String, targetFile: String, totalDelay: Int, frameCount: Int): Boolean {
+    private fun createVideoFromImagesInFolder(folder: String, targetFile: String, totalDelay: Int, frameCount: Int, converterProgress: ConverterProgress?): Boolean {
         // calculate framerate
         val inputFramerate: Float  = frameCount / totalDelay.toFloat() * 1000
         // force 30 FPS output for Telegram animations
@@ -273,51 +238,53 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         // convert video
         val ffmpegCommand = "-r $inputFramerate -f concat -safe 0 -i ${inventoryFile.absolutePath} -r $outputFramerate -vcodec libx264 -pix_fmt yuv420p -crf 24 -preset slow -vf \"fps=${outputFramerate},pad=ceil(iw/2)*2:ceil(ih/2)*2\" -movflags +faststart $targetFile"
         Log.i(NAME, "ffmpeg $ffmpegCommand")
-        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
-        return ReturnCode.isSuccess(session.returnCode)
+        return execFfmpegWithProgress(ffmpegCommand, frameCount, converterProgress, "Converting")
     }
 
-    private fun convertVideoToGif(filePath: String, targetFile: String): Boolean {
+    private fun convertVideoToGif(filePath: String, targetFile: String, converterProgress: ConverterProgress?): Boolean {
         val ffmpegCommand = "-i '$filePath' '$targetFile'"
         Log.i(NAME, "ffmpeg $ffmpegCommand")
-        val sessionGif: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
-        return ReturnCode.isSuccess(sessionGif.returnCode)
+        var totalFrames = 0
+        if(converterProgress != null){
+            totalFrames = getTotalFrames(filePath)
+        }
+        return execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress, "Converting")
     }
 
-    private fun convertVideoToGif(filePath: String): File {
+    private fun convertVideoToGif(filePath: String, converterProgress: ConverterProgress?): File {
         val targetFolder = applicationContext.cacheDir.resolve("converter").absolutePath
         // prepare folder structure
         File(targetFolder).deleteRecursively();
         File(targetFolder).mkdirs()
         // convert to gif
         val targetFile = "${targetFolder}/output.gif"
-        if (convertVideoToGif(filePath, targetFile)) {
+        if (convertVideoToGif(filePath, targetFile, converterProgress)) {
             return File(targetFile)
         } else {
             throw IllegalStateException("Error while converting to gif")
         }
     }
 
-    fun convertVideoToGifInSameFolder(filePath: String): Boolean {
-        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+    fun convertVideoToGifInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
+        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".mp4"
         if (File(targetFile).exists()) {
             return true;
         }
-        return convertVideoToGif(filePath, targetFile)
+        return convertVideoToGif(filePath, targetFile, converterProgress)
     }
 
-    fun convertAnimatedImageToGifInSameFolder(filePath: String): Boolean {
-        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".gif"
-        val tmpFile = convertAnimatedImageToVideo(filePath)
-        return convertVideoToGif(tmpFile.path, targetFile)
+    fun convertAnimatedImageToGifInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
+        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".gif"
+        val tmpFile = convertAnimatedImageToVideo(filePath, converterProgress)
+        return convertVideoToGif(tmpFile.path, targetFile, converterProgress)
     }
 
-    fun convertAnimatedImageToVideoInSameFolder(filePath: String): Boolean {
-        val targetFile = filePath.substring(0, filePath.lastIndexOf(".")) + ".mp4"
+    fun convertAnimatedImageToVideoInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
+        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".mp4"
         if (File(targetFile).exists()) {
             return true;
         }
-        val tmpFile = convertAnimatedImageToVideo(filePath)
+        val tmpFile = convertAnimatedImageToVideo(filePath, converterProgress)
         tmpFile.let { sourceFile ->
             sourceFile.copyTo(File(targetFile))
             sourceFile.delete()
@@ -325,7 +292,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         return true
     }
 
-    fun convertAnimatedImageToVideo(filePath: String): File {
+    fun convertAnimatedImageToVideo(filePath: String, converterProgress: ConverterProgress?): File {
         // select image type
         var imageHandler: AnimatedImageHandler
         if (filePath.lowercase().endsWith(".webp")) {
@@ -341,10 +308,10 @@ class AnimatedImageConverter(private val applicationContext: Context) {
             // animated
             applicationContext.toast("Converting to video...")
             Log.i(NAME, "Extracting frames from '$filePath'...")
-            val totalDelay = extractImages(imageHandler, targetFolder)
+            val totalDelay = extractImages(imageHandler, targetFolder, converterProgress)
             Log.i(NAME, "Total delay: $totalDelay, frames: $frameCount")
             val targetFile = "${targetFolder}/output.mp4"
-            if (createVideoFromImagesInFolder(targetFolder, targetFile, totalDelay, frameCount)) {
+            if (createVideoFromImagesInFolder(targetFolder, targetFile, totalDelay, frameCount, converterProgress)) {
                 Log.i(NAME, "ffmpeg finished successfully")
                 return File(targetFile)
             } else {
@@ -352,7 +319,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
             }
         } else if (frameCount == 1) {
             // not animated
-            extractImages(imageHandler, targetFolder)
+            extractImages(imageHandler, targetFolder, converterProgress)
             // return the only extracted image as png
             return File("$targetFolder/${"0".padStart(FILE_PADDING, '0')}.png")
         } else {
@@ -360,15 +327,18 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
     }
 
-    fun convertToVideoInSameFolder(filePath: String): Boolean {
+    fun convertToVideoInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
         val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".mp4"
         if (File(targetFile).exists()) {
             return true;
         }
         val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx264 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
         Log.i(NAME, "ffmpeg $ffmpegCommand")
-        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
-        if(ReturnCode.isSuccess(session.returnCode)) {
+        var totalFrames = 0
+        if(converterProgress != null){
+            totalFrames = getTotalFrames(filePath)
+        }
+        if(execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress, "Converting")) {
             return true
         } else {
             if (File(targetFile).exists()) {
@@ -378,21 +348,61 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
     }
 
-    fun convertToWebpInSameFolder(filePath: String): Boolean {
+    fun convertToWebpInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
         val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".webp"
         if (File(targetFile).exists()) {
             return true
         }
         val ffmpegCommand = "-i \"$filePath\" -vcodec webp -loop 0 -pix_fmt yuva420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
         Log.i(NAME, "ffmpeg $ffmpegCommand")
-        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
-        if(ReturnCode.isSuccess(session.returnCode)) {
+        var totalFrames = 0
+        if(converterProgress != null){
+            totalFrames = getTotalFrames(filePath)
+        }
+        if(execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress, "Converting")) {
             return true;
         } else {
             if (File(targetFile).exists()) {
                 File(targetFile).delete()
             }
             return false
+        }
+    }
+
+    fun execFfmpegWithProgress(ffmpegCommand: String, totalFrames: Int, converterProgress: ConverterProgress?, status: String): Boolean {
+        if(converterProgress == null) {
+            val session = FFmpegKit.execute(ffmpegCommand)
+            return ReturnCode.isSuccess(session.returnCode)
+        } else {
+            val ffmpegCompletable = CompletableFuture<Boolean>()
+            val completeCallback = FFmpegSessionCompleteCallback{ session ->
+                converterProgress.accept(100.0f, status)
+                ffmpegCompletable.complete(ReturnCode.isSuccess(session.returnCode))
+            }
+            val statisticsCallback = StatisticsCallback { statistics ->
+                converterProgress.accept(statistics.videoFrameNumber / totalFrames.toFloat() * 100.0f, status)
+            }
+            FFmpegKit.executeAsync(ffmpegCommand, completeCallback, null, statisticsCallback)
+            return ffmpegCompletable.get()
+        }
+    }
+
+    fun getTotalFrames(filePath: String): Int {
+        var session: FFprobeSession = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
+        if(ReturnCode.isSuccess(session.returnCode)) {
+            if(session.logsAsString?.length != 0) {
+                try {
+                    return session.logsAsString.toInt()
+                } catch (e: NumberFormatException) {
+                    return -1
+                }
+            }
+        }
+        session = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
+        try {
+            return session.logsAsString.toInt()
+        } catch (e: NumberFormatException) {
+            return -1
         }
     }
 }

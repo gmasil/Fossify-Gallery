@@ -967,20 +967,7 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
         }
 
         binding.bottomActions.bottomEdit.beVisibleIf(visibleBottomActions and BOTTOM_ACTION_EDIT != 0 && currentMedium?.isSVG() == false)
-        binding.bottomActions.bottomEdit.setOnLongClickListener {
-            if(getCurrentPath().lowercase().endsWith(".gif")) {
-                ensureBackgroundThread {
-                    if(AnimatedImageConverter(applicationContext).convertToVideoInSameFolder(getCurrentPath())) {
-                        applicationContext.toast("Video conversion finished")
-                    } else {
-                        applicationContext.toast("Video conversion failed")
-                    }
-                }
-            } else {
-                toast(R.string.edit)
-            }
-            true
-        }
+        binding.bottomActions.bottomEdit.setOnLongClickListener { toast(R.string.edit); true}
         binding.bottomActions.bottomEdit.setOnClickListener {
             openEditor(getCurrentPath())
         }

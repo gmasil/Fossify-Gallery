@@ -58,12 +58,13 @@ import java.io.*
 import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.core.net.toUri
-import androidx.core.util.Consumer
+import de.gmasil.converter.api.ConverterProgress
 
 fun Activity.sharePath(path: String) {
+    val progress = createConverterProgressNotification(applicationContext, "Converting file to share", true)
     ensureBackgroundThread {
         try {
-            sharePathIntent(AnimatedImageConverter(this).handleMediaForSharing(path).absolutePath, BuildConfig.APPLICATION_ID)
+            sharePathIntent(AnimatedImageConverter(this).handleMediaForSharing(path, progress).absolutePath, BuildConfig.APPLICATION_ID)
         } catch (e: Exception) {
             toast("${e.message}, sharing original...")
             e.printStackTrace()
@@ -122,6 +123,7 @@ fun Activity.openEditor(path: String, forceChooser: Boolean = false) {
 
 fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
     val converter = AnimatedImageConverter(this)
+    val converterProgress = createConverterProgressNotification(applicationContext, "Converting file", false)
     ensureBackgroundThread {
         for (medium in mediaList) {
             if(medium.path.lowercase().endsWith(".${targetType.lowercase()}")) {
@@ -130,17 +132,17 @@ fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
             }
             if (targetType.lowercase() == "mp4") {
                 if(medium.path.lowercase().endsWith(".webp")) {
-                    converter.convertAnimatedImageToVideoInSameFolder(medium.path)
+                    converter.convertAnimatedImageToVideoInSameFolder(medium.path, converterProgress)
                 } else if(medium.path.lowercase().endsWith(".gif") || medium.path.lowercase().endsWith(".webm")) {
-                    converter.convertToVideoInSameFolder(medium.path)
+                    converter.convertToVideoInSameFolder(medium.path, converterProgress)
                 }
             } else if(targetType.lowercase() == "webp") {
-                converter.convertToWebpInSameFolder(medium.path)
+                converter.convertToWebpInSameFolder(medium.path, converterProgress)
             } else if(targetType.lowercase() == "gif") {
                 if(medium.path.lowercase().endsWith(".webp")) {
-                    converter.convertAnimatedImageToGifInSameFolder(medium.path)
+                    converter.convertAnimatedImageToGifInSameFolder(medium.path, converterProgress)
                 } else if(medium.path.lowercase().endsWith(".mp4")) {
-                    converter.convertVideoToGifInSameFolder(medium.path)
+                    converter.convertVideoToGifInSameFolder(medium.path, converterProgress)
                 }
             }
         }
@@ -149,10 +151,25 @@ fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
 }
 
 fun Activity.reduceMediaSize(mediaList: List<Medium>, replace: Boolean) {
+    val converter = AnimatedImageConverter(this)
+    val converterProgress = createConverterProgressNotification(applicationContext, "Reducing file size", false)
+    ensureBackgroundThread {
+        var i = 0
+        var reduced = 0
+        for (medium in mediaList) {
+            if(converter.reduceFileSize(medium.path, replace, converterProgress)){
+                reduced++
+            }
+            i++
+        }
+        // TODO: set progress to final report
+    }
+}
 
+fun createConverterProgressNotification(ctx: Context, title: String, closeAtEnd: Boolean): ConverterProgress {
     val notificationId = 100
     val notificationChannelId = "GALLERY_CONVERT_CHANNEL"
-    val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     notificationManager.deleteNotificationChannel(notificationChannelId);
 
@@ -164,45 +181,32 @@ fun Activity.reduceMediaSize(mediaList: List<Medium>, replace: Boolean) {
     channel.description = "Gallery Convert Channel Progress Notification"
     notificationManager.createNotificationChannel(channel)
 
-    val notificationBuilder = Notification.Builder(applicationContext, notificationChannelId)
+    val notificationBuilder = Notification.Builder(ctx, notificationChannelId)
     notificationBuilder.setOngoing(true)
-                       .setSmallIcon(R.drawable.ic_launcher_foreground)
-                       .setContentTitle("Reducing file size")
-                       .setContentText("Processing...")
-                       .setProgress(100, 0, false)
+        .setSmallIcon(R.drawable.ic_launcher_foreground)
+        .setContentTitle(title)
+        .setContentText("Initializing...")
+        .setProgress(100, 0, false)
 
-    var notification = notificationBuilder.build()
-    notificationManager.notify(notificationId, notification)
+//    var notification = notificationBuilder.build()
+//    notificationManager.notify(notificationId, notification)
 
-    val converterProgress = Consumer<Float> { progressPercent ->
+    return ConverterProgress { progressPercent, status ->
         ensureBackgroundThread {
-            notificationBuilder.setProgress(100, progressPercent.toInt(), false)
-            notificationBuilder.setContentText("Converting ${progressPercent.toInt()}%...")
-            notification = notificationBuilder.build()
-            notificationManager.notify(notificationId, notification)
-        }
-    }
-
-    val converter = AnimatedImageConverter(this)
-    ensureBackgroundThread {
-        var i = 0
-        var reduced = 0
-        var currentPercentage = 0
-        for (medium in mediaList) {
-            if(converter.reduceFileSize(medium.path, replace, converterProgress)){
-                reduced++
+            if (closeAtEnd && progressPercent.toInt() == 100) {
+                notificationManager.cancel(notificationId)
+//                val timer = object: CountDownTimer(1000, 1000) {
+//                    override fun onTick(millisUntilFinished: Long) {}
+//                    override fun onFinish() {notificationManager.cancel(notificationId)}
+//                }
+//                timer.start()
+            } else {
+                notificationBuilder.setProgress(100, progressPercent.toInt(), false)
+                notificationBuilder.setContentText("$status ${progressPercent.toInt()}%...")
+                val notification = notificationBuilder.build()
+                notificationManager.notify(notificationId, notification)
             }
-            i++
-//            currentPercentage = (i*100)/mediaList.size
-//            notificationBuilder.setProgress(100, currentPercentage, false)
-//            notificationBuilder.setContentText("Processing $i/${mediaList.size}...")
-//            notification = notificationBuilder.build()
-//            notificationManager.notify(notificationId, notification)
         }
-        notificationBuilder.setProgress(100, 100, false)
-        notificationBuilder.setContentText("Done. Reduced size of $reduced/$i files")
-        notification = notificationBuilder.build()
-        notificationManager.notify(notificationId, notification)
     }
 }
 
