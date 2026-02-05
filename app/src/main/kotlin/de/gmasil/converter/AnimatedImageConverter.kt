@@ -4,9 +4,15 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import androidx.core.util.Consumer
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegSession
+import com.arthenica.ffmpegkit.FFmpegSessionCompleteCallback
+import com.arthenica.ffmpegkit.FFprobeKit
+import com.arthenica.ffmpegkit.FFprobeSession
 import com.arthenica.ffmpegkit.ReturnCode
+import com.arthenica.ffmpegkit.Statistics
+import com.arthenica.ffmpegkit.StatisticsCallback
 import de.gmasil.converter.api.AnimatedImageHandler
 import de.gmasil.converter.impl.GifImageHandler
 import de.gmasil.converter.impl.WebpImageHandler
@@ -14,6 +20,7 @@ import org.fossify.commons.extensions.toast
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+import java.util.concurrent.CompletableFuture
 
 
 class AnimatedImageConverter(private val applicationContext: Context) {
@@ -56,7 +63,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         return targetFile
     }
 
-    fun reduceFileSize(filePath: String, replace: Boolean): Boolean {
+    fun reduceFileSize(filePath: String, replace: Boolean, converterProgress: Consumer<Float>?): Boolean {
         if(filePath.lowercase().endsWith(".webp")) {
             // check if it is a single image webp
             if(isAnimatedWebp(filePath)){
@@ -72,7 +79,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         } else if (isNormalImageFile(filePath)) {
             return reduceStillImageSize(filePath, replace)
         } else if(listOf(".mp4", ".webm").any { filePath.lowercase().endsWith(it) }) {
-            return reduceVideoSize(filePath, replace)
+            return reduceVideoSize(filePath, replace, converterProgress)
         } else {
             val fileType = filePath.substring(filePath.lastIndexOf("."), filePath.length)
             applicationContext.toast("Unsupported file type: $fileType")
@@ -80,7 +87,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
     }
 
-    fun reduceVideoSize(filePath: String, replace: Boolean): Boolean {
+    fun reduceVideoSize(filePath: String, replace: Boolean, converterProgress: Consumer<Float>?): Boolean {
         val targetFolder = applicationContext.cacheDir.resolve("converter")
         targetFolder.deleteRecursively()
         targetFolder.mkdirs()
@@ -91,8 +98,10 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         val tmpFile = File(targetFolder, "output.mp4")
         val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx265 -crf 28 -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map_metadata 0 -map_metadata:s:v 0:s:v \"${tmpFile.absolutePath}\""
         Log.i(NAME, "ffmpeg $ffmpegCommand")
-        val session: FFmpegSession = FFmpegKit.execute(ffmpegCommand)
-        if(!ReturnCode.isSuccess(session.returnCode)) {
+
+        val totalFrames = getTotalFrames(filePath)
+
+        if(!execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress)) {
             return false
         }
         // check if new file is smaller
@@ -108,6 +117,42 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         tmpFile.delete()
         targetFile.setLastModified(lastModified)
         return true
+    }
+
+    fun execFfmpegWithProgress(ffmpegCommand: String, totalFrames: Int, converterProgress: Consumer<Float>?): Boolean {
+        if(converterProgress == null) {
+            val session = FFmpegKit.execute(ffmpegCommand)
+            return ReturnCode.isSuccess(session.returnCode)
+        } else {
+            val ffmpegCompletable = CompletableFuture<Boolean>()
+            val completeCallback: FFmpegSessionCompleteCallback = fun(session) {
+                converterProgress.accept(100.0f)
+                ffmpegCompletable.complete(ReturnCode.isSuccess(session.returnCode))
+            }
+            val statisticsCallback: StatisticsCallback = fun(statistics: Statistics) {
+                converterProgress.accept(statistics.videoFrameNumber / totalFrames.toFloat() * 100.0f)
+            }
+            FFmpegKit.executeAsync(ffmpegCommand, completeCallback, null, statisticsCallback)
+            return ffmpegCompletable.get()
+        }
+    }
+    fun getTotalFrames(filePath: String): Int {
+        var session: FFprobeSession = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
+        if(ReturnCode.isSuccess(session.returnCode)) {
+            if(session.logsAsString?.length != 0) {
+                try {
+                    return session.logsAsString.toInt()
+                } catch (e: NumberFormatException) {
+                    return -1
+                }
+            }
+        }
+        session = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
+        try {
+            return session.logsAsString.toInt()
+        } catch (e: NumberFormatException) {
+            return -1
+        }
     }
 
     fun reduceStillImageSize(filePath: String, replace: Boolean): Boolean {

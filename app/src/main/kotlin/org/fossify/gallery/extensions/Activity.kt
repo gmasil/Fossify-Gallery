@@ -58,6 +58,7 @@ import java.io.*
 import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.core.net.toUri
+import androidx.core.util.Consumer
 
 fun Activity.sharePath(path: String) {
     ensureBackgroundThread {
@@ -173,21 +174,30 @@ fun Activity.reduceMediaSize(mediaList: List<Medium>, replace: Boolean) {
     var notification = notificationBuilder.build()
     notificationManager.notify(notificationId, notification)
 
+    val converterProgress: Consumer<Float> = fun(progressPercent: Float) {
+        ensureBackgroundThread {
+            notificationBuilder.setProgress(100, progressPercent.toInt(), false)
+            notificationBuilder.setContentText("Converting ${progressPercent.toInt()}%...")
+            notification = notificationBuilder.build()
+            notificationManager.notify(notificationId, notification)
+        }
+    }
+
     val converter = AnimatedImageConverter(this)
     ensureBackgroundThread {
         var i = 0
         var reduced = 0
         var currentPercentage = 0
         for (medium in mediaList) {
-            if(converter.reduceFileSize(medium.path, replace)){
+            if(converter.reduceFileSize(medium.path, replace, converterProgress)){
                 reduced++
             }
             i++
-            currentPercentage = (i*100)/mediaList.size
-            notificationBuilder.setProgress(100, currentPercentage, false)
-            notificationBuilder.setContentText("Processing $i/${mediaList.size}...")
-            notification = notificationBuilder.build()
-            notificationManager.notify(notificationId, notification)
+//            currentPercentage = (i*100)/mediaList.size
+//            notificationBuilder.setProgress(100, currentPercentage, false)
+//            notificationBuilder.setContentText("Processing $i/${mediaList.size}...")
+//            notification = notificationBuilder.build()
+//            notificationManager.notify(notificationId, notification)
         }
         notificationBuilder.setProgress(100, 100, false)
         notificationBuilder.setContentText("Done. Reduced size of $reduced/$i files")
