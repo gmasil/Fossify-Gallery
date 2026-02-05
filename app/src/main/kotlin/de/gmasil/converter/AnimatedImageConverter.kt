@@ -125,11 +125,11 @@ class AnimatedImageConverter(private val applicationContext: Context) {
             return ReturnCode.isSuccess(session.returnCode)
         } else {
             val ffmpegCompletable = CompletableFuture<Boolean>()
-            val completeCallback: FFmpegSessionCompleteCallback = fun(session) {
+            val completeCallback = FFmpegSessionCompleteCallback{ session ->
                 converterProgress.accept(100.0f)
                 ffmpegCompletable.complete(ReturnCode.isSuccess(session.returnCode))
             }
-            val statisticsCallback: StatisticsCallback = fun(statistics: Statistics) {
+            val statisticsCallback = StatisticsCallback { statistics ->
                 converterProgress.accept(statistics.videoFrameNumber / totalFrames.toFloat() * 100.0f)
             }
             FFmpegKit.executeAsync(ffmpegCommand, completeCallback, null, statisticsCallback)

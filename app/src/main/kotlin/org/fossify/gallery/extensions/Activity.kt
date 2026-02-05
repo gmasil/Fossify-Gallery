@@ -174,7 +174,7 @@ fun Activity.reduceMediaSize(mediaList: List<Medium>, replace: Boolean) {
     var notification = notificationBuilder.build()
     notificationManager.notify(notificationId, notification)
 
-    val converterProgress: Consumer<Float> = fun(progressPercent: Float) {
+    val converterProgress = Consumer<Float> { progressPercent ->
         ensureBackgroundThread {
             notificationBuilder.setProgress(100, progressPercent.toInt(), false)
             notificationBuilder.setContentText("Converting ${progressPercent.toInt()}%...")
