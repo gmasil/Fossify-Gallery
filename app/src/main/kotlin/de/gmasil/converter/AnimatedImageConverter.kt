@@ -392,7 +392,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         if(ReturnCode.isSuccess(session.returnCode)) {
             if(session.logsAsString?.length != 0) {
                 try {
-                    return session.logsAsString.toInt()
+                    return session.logsAsString.toFloat().toInt()
                 } catch (e: NumberFormatException) {
                     return -1
                 }
@@ -400,7 +400,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
         session = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
         try {
-            return session.logsAsString.toInt()
+            return session.logsAsString.toFloat().toInt()
         } catch (e: NumberFormatException) {
             return -1
         }
