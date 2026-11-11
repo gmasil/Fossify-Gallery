@@ -67,6 +67,7 @@ class SettingsActivity : SimpleActivity() {
         setupRememberLastVideo()
         setupLoopVideos()
         setupOpenVideosOnSeparateScreen()
+        setupOnVideoTap()
         setupMaxBrightness()
         setupUltraHdrRendering()
         setupCropThumbnails()
@@ -299,12 +300,38 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private fun setupOpenVideosOnSeparateScreen() {
-        binding.settingsOpenVideosOnSeparateScreen.isChecked = config.openVideosOnSeparateScreen
+        binding.settingsOpenVideosOnSeparateScreen.isChecked = config.gestureVideoPlayer
         binding.settingsOpenVideosOnSeparateScreenHolder.setOnClickListener {
             binding.settingsOpenVideosOnSeparateScreen.toggle()
-            config.openVideosOnSeparateScreen = binding.settingsOpenVideosOnSeparateScreen.isChecked
+            config.gestureVideoPlayer = binding.settingsOpenVideosOnSeparateScreen.isChecked
         }
     }
+
+    private fun setupOnVideoTap() {
+        binding.settingsOnVideoTap.text = getVideoPlayerTypeText()
+        binding.settingsOnVideoTapHolder.setOnClickListener {
+            val items = arrayListOf(
+                RadioItem(VIDEO_PLAYER_APP, getString(R.string.open_in_app_player)),
+                RadioItem(VIDEO_PLAYER_SYSTEM, getString(R.string.open_system_default_player))
+            )
+
+            RadioGroupDialog(
+                activity = this@SettingsActivity,
+                items = items,
+                checkedItemId = config.videoPlayerType
+            ) {
+                config.videoPlayerType = it as Int
+                binding.settingsOnVideoTap.text = getVideoPlayerTypeText()
+            }
+        }
+    }
+
+    private fun getVideoPlayerTypeText() = getString(
+        when (config.videoPlayerType) {
+            VIDEO_PLAYER_APP -> R.string.open_in_app_player
+            else -> R.string.open_system_default_player
+        }
+    )
 
     private fun setupMaxBrightness() {
         binding.settingsMaxBrightness.isChecked = config.maxBrightness
@@ -825,7 +852,7 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private fun getExportFavoritesFilename(): String {
-        val appName = baseConfig.appId.removeSuffix(".debug").removeSuffix(".pro").removePrefix("org.fossify.")
+        val appName = baseConfig.appId.removeSuffix(".debug").removePrefix("org.fossify.")
         return "$appName-favorites_${getCurrentFormattedDateTime()}"
     }
 
@@ -900,7 +927,8 @@ class SettingsActivity : SimpleActivity() {
                 put(AUTOPLAY_VIDEOS, config.autoplayVideos)
                 put(REMEMBER_LAST_VIDEO_POSITION, config.rememberLastVideoPosition)
                 put(LOOP_VIDEOS, config.loopVideos)
-                put(OPEN_VIDEOS_ON_SEPARATE_SCREEN, config.openVideosOnSeparateScreen)
+                put(GESTURE_VIDEO_PLAYER, config.gestureVideoPlayer)
+                put(VIDEO_PLAYER_TYPE, config.videoPlayerType)
                 put(ALLOW_VIDEO_GESTURES, config.allowVideoGestures)
                 put(ANIMATE_GIFS, config.animateGifs)
                 put(CROP_THUMBNAILS, config.cropThumbnails)
@@ -1046,7 +1074,8 @@ class SettingsActivity : SimpleActivity() {
                 AUTOPLAY_VIDEOS -> config.autoplayVideos = value.toBoolean()
                 REMEMBER_LAST_VIDEO_POSITION -> config.rememberLastVideoPosition = value.toBoolean()
                 LOOP_VIDEOS -> config.loopVideos = value.toBoolean()
-                OPEN_VIDEOS_ON_SEPARATE_SCREEN -> config.openVideosOnSeparateScreen = value.toBoolean()
+                GESTURE_VIDEO_PLAYER -> config.gestureVideoPlayer = value.toBoolean()
+                VIDEO_PLAYER_TYPE -> config.videoPlayerType = value.toInt()
                 ALLOW_VIDEO_GESTURES -> config.allowVideoGestures = value.toBoolean()
                 ANIMATE_GIFS -> config.animateGifs = value.toBoolean()
                 CROP_THUMBNAILS -> config.cropThumbnails = value.toBoolean()

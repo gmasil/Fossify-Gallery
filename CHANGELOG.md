@@ -5,8 +5,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.14.2] - 2026-11-03
+### Changed
+- Updated translations
+
+## [1.14.1] - 2026-10-23
+### Changed
+- Updated translations
+
+## [1.14.0] - 2026-10-10
+### Changed
+- Compatibility with newer Android devices using 16KB pages
+- Updated translations
+
+## [1.13.1] - 2026-02-14
+### Changed
+- Updated translations
+
+### Fixed
+- Fixed file size calculations to use SI decimal units (divide by 1000)
+
+## [1.13.0] - 2026-02-06
+### Added
+- Added "On video tap" option to choose between in-app player or default player app ([#917])
+
+### Changed
+- Updated translations
+
 ### Fixed
 - Fixed unnecessary "Video has no audio" toast when looping videos ([#876])
+- Fixed same pencil icons for edit and rename buttons ([#925])
 
 ## [1.12.0] - 2026-02-02
 ### Changed
@@ -292,8 +321,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#830]: https://github.com/FossifyOrg/Gallery/issues/830
 [#831]: https://github.com/FossifyOrg/Gallery/issues/831
 [#876]: https://github.com/FossifyOrg/Gallery/issues/876
+[#917]: https://github.com/FossifyOrg/Gallery/issues/917
+[#925]: https://github.com/FossifyOrg/Gallery/issues/925
 
-[Unreleased]: https://github.com/FossifyOrg/Gallery/compare/1.12.0...HEAD
+[Unreleased]: https://github.com/FossifyOrg/Gallery/compare/1.14.2...HEAD
+[1.14.2]: https://github.com/FossifyOrg/Gallery/compare/1.14.1...1.14.2
+[1.14.1]: https://github.com/FossifyOrg/Gallery/compare/1.14.0...1.14.1
+[1.14.0]: https://github.com/FossifyOrg/Gallery/compare/1.13.1...1.14.0
+[1.13.1]: https://github.com/FossifyOrg/Gallery/compare/1.13.0...1.13.1
+[1.13.0]: https://github.com/FossifyOrg/Gallery/compare/1.12.0...1.13.0
 [1.12.0]: https://github.com/FossifyOrg/Gallery/compare/1.11.0...1.12.0
 [1.11.0]: https://github.com/FossifyOrg/Gallery/compare/1.10.0...1.11.0
 [1.10.0]: https://github.com/FossifyOrg/Gallery/compare/1.9.1...1.10.0

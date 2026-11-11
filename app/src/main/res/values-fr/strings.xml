@@ -9,7 +9,7 @@
     <string name="unpin_folder">Libérer le dossier</string>
     <string name="pin_to_the_top">Épingler en haut</string>
     <string name="show_all">Afficher tout les contenus des dossiers</string>
-    <string name="all_folders">Dossiers</string>
+    <string name="all_folders">Tous les dossiers</string>
     <string name="folder_view">Basculer vers l\'affichage par dossiers</string>
     <string name="other_folder">Autre dossier</string>
     <string name="show_on_map">Afficher sur une carte</string>
@@ -126,7 +126,7 @@
     <string name="slideshow_ended">Diaporama terminé</string>
     <string name="no_media_for_slideshow">Aucun média trouvé pour le diaporama</string>
     <string name="group_direct_subfolders">Mode sous-dossiers</string>
-    <string name="group_by">Grouper par...</string>
+    <string name="group_by">Grouper par</string>
     <string name="do_not_group_files">Ne pas grouper les fichiers</string>
     <string name="by_folder">Dossier</string>
     <string name="by_last_modified">Date de modification</string>
@@ -171,7 +171,7 @@
     <string name="show_recycle_bin_last">Afficher la corbeille en fin de liste sur l\'écran principal</string>
     <string name="allow_down_gesture">Fermer la vue plein écran par un geste vers le bas</string>
     <string name="allow_one_to_one_zoom">Permettre un zoom avant 1:1 par double appui</string>
-    <string name="open_videos_on_separate_screen">Ouvrir les vidéos dans une fenêtre indépendante</string>
+    <string name="open_videos_on_separate_screen">Lire les vidéos dans une fenêtre indépendante avec des gestes horizontaux</string>
     <string name="show_notch">Afficher une encoche si disponible</string>
     <string name="allow_rotating_gestures">Pivoter les images par gestes</string>
     <string name="file_loading_priority">Priorité de chargement des fichiers</string>
@@ -266,4 +266,7 @@
     <string name="overwrite_original">Remplacer l\'original</string>
     <string name="render_ultra_hdr_photos">Afficher les photos Ultra HDR en HDR</string>
     <string name="video_no_sound">Cette vidéo n\'a pas d\'audio</string>
+    <string name="open_system_default_player">Ouvrir l\'application du lecteur par défaut</string>
+    <string name="on_video_tap">Lecture de la vidéo</string>
+    <string name="open_in_app_player">Ouvrir le lecteur intégrer</string>
 </resources>

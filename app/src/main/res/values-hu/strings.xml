@@ -166,13 +166,13 @@
     <string name="allow_deep_zooming_images">Képek mély nagyításának engedélyezése</string>
     <string name="hide_extended_details">Bővített részletek elrejtése, ha az állapotsor rejtett</string>
     <string name="show_at_bottom">Egyes műveleti gombok megjelenítése a képernyő alján</string>
-    <string name="show_recycle_bin">Lomtár megjelenítése a mappák képernyőjén</string>
+    <string name="show_recycle_bin">Lomtár megjelenítése a mappáknál</string>
     <string name="deep_zoomable_images">Mély nagyítású képek</string>
     <string name="show_highest_quality">Képek megjelenítése a lehető legjobb minőségben</string>
     <string name="show_recycle_bin_last">Lomtár megjelenítése a főképernyő utolsó elemeként</string>
     <string name="allow_down_gesture">Teljes képernyős nézet bezárásának engedélyezése a lefelé gesztussal</string>
     <string name="allow_one_to_one_zoom">Az 1:1 nagyítás engedélyezése két dupla érintéssel</string>
-    <string name="open_videos_on_separate_screen">Az új vízszintes gesztusokkal mindig külön képernyőn nyitja meg a videókat</string>
+    <string name="open_videos_on_separate_screen">A videókat egy külön képernyőn játssza le, vízszintes gesztusokkal</string>
     <string name="show_notch">Notch megjelenítése, ha elérhető</string>
     <string name="allow_rotating_gestures">Képek gesztusokkal történő forgatásának engedélyezése</string>
     <string name="file_loading_priority">Fájlbetöltés prioritása</string>
@@ -235,7 +235,7 @@
     <string name="faq_14_title">Elrejtettem egy fájlt/mappát. Hogyan tudom újra megjeleníteni\?</string>
     <string name="faq_14_text">A rejtett elemek megtekintéséhez nyomja meg a „Rejtett elemek ideiglenes megjelenítése” elemet a főképernyőn, vagy válassza a „Rejtett elemek megjelenítése” lehetőséget az alkalmazásbeállításokban. Ha meg akarja szüntetni, csak hosszan nyomja meg, és válassza az „Elrejtés megszüntetése” lehetőséget. A mappák elrejtése egy rejtett „.nomedia” fájl hozzáadásával történik. Ezt a fájlt bármelyik fájlkezelővel törölheti. Vegye figyelembe, hogy az elrejtés rekurzív módon működik, ha elrejt egy mappát, akkor az összes almappája is rejtett lesz. Így az almappák elrejtésének megszüntetéséhez láthatóvá kell tennie a szülőmappát is.</string>
     <string name="faq_15_title">Miért használ az alkalmazás ennyi helyet\?</string>
-    <string name="faq_15_text">Az alkalmazás gyorsítótára akár a 250 MB-ot is meghaladhatja, és ez gyorsabb megjelenítést biztosít. Ha az alkalmazás még több helyet foglal el, a legvalószínűbb oka, hogy a Lomtárban is van elem. Ezek a fájlok is az alkalmazás méretébe számítanak bele. Törölheti a Lomtárat azzal, hogy megnyitja és törli az összes fájlt vagy az alkalmazás beállításait. A Lomtárban lévő minden fájl 30 nap elteltével automatikusan törlődik.</string>
+    <string name="faq_15_text">Az alkalmazás gyorsítótára akár a 250 MB-ot is elérheti, amely gyorsabb megjelenítést biztosít. Ha az alkalmazás még több helyet foglal el, a legvalószínűbb oka, hogy a Lomtárban is van elem. Ezek a fájlok is az alkalmazás méretébe számítanak bele. Törölheti a Lomtárat, ha törli a benne levő fájlokat, vagy közvetlenül az appbeállításokból üríti. A Lomtárban lévő minden fájl 30 nap elteltével automatikusan törlődik.</string>
     <string name="faq_16_title">Mi történt a fájlok és mappák elrejtésével, és miért nem látom már a rejtett elemeket\?</string>
     <string name="faq_16_text">Az Android 11-től kezdődően már nem lehet elrejteni vagy elrejtést megszüntetni a fájlokat vagy mappákat, a rendszer korlátozása miatt a galériaalkalmazásokban sem láthatók a rejtett fájlok és mappák. Ehhez valamilyen fájlkezelőt kell használnod.</string>
     <string name="faq_16_text_extra">Vagy engedélyezheti a galériának az eszközbeállításokban, hogy az összes fájlt elérje, ez lehetővé teszi a rejtett fájlok megjelenítését, és úgy általánosságban megbízhatóbbá teszi a fájlműveleteket.</string>
@@ -258,8 +258,15 @@
     <string name="file_is_malformed_or_corrupted">Hibás vagy sérült fájl.</string>
     <string name="unsupported_format">Nem támogatott formátum.</string>
     <plurals name="restore_confirmation">
-        <item quantity="one">Biztosan vissza szeretné állítani a(z) %d fájlt?</item>
+        <item quantity="one">Biztosan vissza szeretné állítani a %d fájlt?</item>
         <item quantity="other">Biztosan vissza szeretné állítani a(z) %d fájlokat?</item>
     </plurals>
     <string name="keep_screen_on_fullscreen_photos">Képernyő bekapcsolva tartása teljes képernyős nézetben</string>
+    <string name="force_landscape_reverse">Tájkép kényszerítés (fordított)</string>
+    <string name="overwrite_original">Eredeti felülírása</string>
+    <string name="render_ultra_hdr_photos">Ultra HDR fotók megjelenítése HDR-ben</string>
+    <string name="open_in_app_player">In-app lejátszó használta</string>
+    <string name="open_system_default_player">Alapértelmezett lejátszó alkalmazás megnyitása</string>
+    <string name="video_no_sound">Eme videónak nincs hangja</string>
+    <string name="on_video_tap">Video erintésekor</string>
 </resources>

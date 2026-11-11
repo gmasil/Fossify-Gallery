@@ -23,7 +23,7 @@
     <string name="force_landscape">Querformat erzwingen</string>
     <string name="use_default_orientation">Standardausrichtung verwenden</string>
     <string name="fix_date_taken">Aufnahmedatum korrigieren</string>
-    <string name="fixing">Korrigieren …</string>
+    <string name="fixing">Wird korrigiert …</string>
     <string name="dates_fixed_successfully">Datum erfolgreich korrigiert</string>
     <string name="no_date_takens_found">Es wurden keine Werte für das Aufnahmedatum gefunden</string>
     <string name="share_resized">Eine verkleinerte Version teilen</string>
@@ -97,7 +97,7 @@
     <string name="set_as_wallpaper">Als Hintergrund festlegen</string>
     <string name="set_as_wallpaper_failed">Hintergrundbild festlegen fehlgeschlagen</string>
     <string name="set_as_wallpaper_with">Als Hintergrund festlegen mit:</string>
-    <string name="setting_wallpaper">Hintergrund festlegen …</string>
+    <string name="setting_wallpaper">Hintergrund wird festgelegt …</string>
     <string name="wallpaper_set_successfully">Hintergrundbild erfolgreich festgelegt</string>
     <string name="portrait_aspect_ratio">Hochformat</string>
     <string name="landscape_aspect_ratio">Querformat</string>
@@ -165,7 +165,7 @@
     <string name="show_recycle_bin_last">Papierkorb als letztes Element auf dem Hauptbildschirm anzeigen</string>
     <string name="allow_down_gesture">Schließen der Vollbildansicht mit einer Abwärtsgeste zulassen</string>
     <string name="allow_one_to_one_zoom">1:1-Zoom mit zweimaligem doppeltem Antippen zulassen</string>
-    <string name="open_videos_on_separate_screen">Videos immer auf einem separaten Bildschirm mit neuen horizontalen Gesten öffnen</string>
+    <string name="open_videos_on_separate_screen">Videos auf einem separaten Bildschirm mit horizontalen Gesten abspielen</string>
     <string name="show_notch">Notch anzeigen, wenn vorhanden</string>
     <string name="allow_rotating_gestures">Rotieren von Bildern mit Gesten zulassen</string>
     <string name="file_loading_priority">Priorität beim Laden von Dateien</string>
@@ -262,4 +262,7 @@
     <string name="overwrite_original">Original überschreiben</string>
     <string name="video_no_sound">Dieses Video hat kein Audio</string>
     <string name="render_ultra_hdr_photos">Ultra-HDR-Fotos in HDR anzeigen</string>
+    <string name="open_system_default_player">Standard-Player-App öffnen</string>
+    <string name="open_in_app_player">In-App-Player öffnen</string>
+    <string name="on_video_tap">Beim Tippen aufs Video</string>
 </resources>
