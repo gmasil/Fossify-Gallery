@@ -114,6 +114,8 @@ import org.fossify.gallery.extensions.tryDeleteFileDirItem
 import org.fossify.gallery.extensions.updateDBDirectory
 import org.fossify.gallery.extensions.updateWidgets
 import org.fossify.gallery.helpers.DIRECTORY
+import org.fossify.gallery.helpers.DUPLICATE_SHOW_FOLDER_NAMES
+import org.fossify.gallery.helpers.DUPLICATE_SCAN_FOLDERS
 import org.fossify.gallery.helpers.GET_ANY_INTENT
 import org.fossify.gallery.helpers.GET_IMAGE_INTENT
 import org.fossify.gallery.helpers.GET_VIDEO_INTENT
@@ -497,6 +499,7 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
             when (menuItem.itemId) {
                 R.id.sort -> showSortingDialog()
                 R.id.filter -> showFilterMediaDialog()
+                R.id.find_duplicates -> showDuplicateFilesDialog()
                 R.id.open_camera -> launchCamera()
                 R.id.show_all -> showAllMedia()
                 R.id.change_view_type -> changeViewType()
@@ -669,6 +672,15 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
             binding.directoriesRefreshLayout.isRefreshing = true
             binding.directoriesGrid.adapter = null
             getDirectories()
+        }
+    }
+
+    private fun showDuplicateFilesDialog() {
+        val displayedDirs = getCurrentlyDisplayedDirs()
+        Intent(this, DuplicateFilesActivity::class.java).apply {
+            putStringArrayListExtra(DUPLICATE_SCAN_FOLDERS, ArrayList(displayedDirs.map { it.path }.distinct()))
+            putExtra(DUPLICATE_SHOW_FOLDER_NAMES, true)
+            startActivity(this)
         }
     }
 

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:padding="@dimen/tiny_margin">
+
+    <org.fossify.commons.views.MySquareImageView
+        android:id="@+id/duplicate_file_thumbnail"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <org.fossify.commons.views.MyTextView
+        android:id="@+id/duplicate_file_folder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/duplicate_file_thumbnail"
+        android:background="@drawable/gradient_background"
+        android:ellipsize="middle"
+        android:gravity="center"
+        android:maxLines="1"
+        android:paddingTop="@dimen/small_margin"
+        android:paddingBottom="@dimen/small_margin"
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/smaller_text_size" />
+</RelativeLayout>

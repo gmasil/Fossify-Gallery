@@ -24,6 +24,7 @@ import java.util.Locale
 
 class MediaFetcher(val context: Context) {
     var shouldStop = false
+    var shouldStopCallback: (() -> Boolean)? = null
 
     // on Android 11 we fetch all files at once from MediaStore and have it split by folder, use it if available
     fun getFilesFrom(
@@ -312,7 +313,7 @@ class MediaFetcher(val context: Context) {
 
         for (curFile in files) {
             var file = curFile
-            if (shouldStop) {
+            if (shouldStop || shouldStopCallback?.invoke() == true) {
                 break
             }
 
@@ -454,7 +455,7 @@ class MediaFetcher(val context: Context) {
         val uri = Files.getContentUri("external")
 
         context.queryCursor(uri, projection) { cursor ->
-            if (shouldStop) {
+            if (shouldStop || shouldStopCallback?.invoke() == true) {
                 return@queryCursor
             }
 
@@ -549,7 +550,7 @@ class MediaFetcher(val context: Context) {
         val OTGPath = context.config.OTGPath
 
         for (file in files) {
-            if (shouldStop) {
+            if (shouldStop || shouldStopCallback?.invoke() == true) {
                 break
             }
 

@@ -45,6 +45,16 @@
         <item quantity="other">Are you sure you want to restore %d files?</item>
     </plurals>
     <string name="full_storage_permission_required">Fossify Gallery needs full access to display all your photos and videos. Go to Settings > Permissions > Photos and videos > Allow all.</string>
+    <string name="duplicate_files">Duplicate files</string>
+    <string name="find_duplicate_files">Find duplicate files</string>
+    <string name="scanning_for_duplicates">Scanning for identical files…</string>
+    <string name="no_duplicate_files_found">No duplicate files found.</string>
+    <string name="duplicate_files_count">Found %1$d identical files</string>
+    <string name="duplicate_group_number">Group %1$d</string>
+    <plurals name="duplicate_group">
+        <item quantity="one">Found %1$d duplicate group:</item>
+        <item quantity="other">Found %1$d duplicate groups:</item>
+    </plurals>
 
     <!-- Filter -->
     <string name="filter_media">Filter media</string>

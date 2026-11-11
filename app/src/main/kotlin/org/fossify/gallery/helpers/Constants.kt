@@ -149,6 +149,8 @@ const val EXOPLAYER_MIN_BUFFER_MS = 2000
 const val EXOPLAYER_MAX_BUFFER_MS = 8000
 
 const val DIRECTORY = "directory"
+const val DUPLICATE_SCAN_FOLDERS = "duplicate_scan_folders"
+const val DUPLICATE_SHOW_FOLDER_NAMES = "duplicate_show_folder_names"
 const val MEDIUM = "medium"
 const val PATH = "path"
 const val GET_IMAGE_INTENT = "get_image_intent"
