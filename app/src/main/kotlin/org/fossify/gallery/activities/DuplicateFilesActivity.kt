@@ -12,7 +12,6 @@ import org.fossify.commons.extensions.isGif
 import org.fossify.commons.extensions.isRawFast
 import org.fossify.commons.extensions.isSvg
 import org.fossify.commons.extensions.isVideoFast
-import org.fossify.gallery.extensions.launchVideoPlayer
 import org.fossify.commons.extensions.viewBinding
 import org.fossify.commons.helpers.NavigationIcon
 import org.fossify.commons.helpers.ensureBackgroundThread
@@ -20,6 +19,8 @@ import org.fossify.gallery.R
 import org.fossify.gallery.adapters.DuplicateFilesAdapter
 import org.fossify.gallery.databinding.ActivityDuplicateFilesBinding
 import org.fossify.gallery.extensions.config
+import org.fossify.gallery.extensions.launchGesturePlayer
+import org.fossify.gallery.extensions.openPath
 import org.fossify.gallery.helpers.DUPLICATE_SCAN_FOLDERS
 import org.fossify.gallery.helpers.DUPLICATE_SHOW_FOLDER_NAMES
 import org.fossify.gallery.helpers.DuplicateFileFinder
@@ -30,6 +31,8 @@ import org.fossify.gallery.helpers.TYPE_GIFS
 import org.fossify.gallery.helpers.TYPE_RAWS
 import org.fossify.gallery.helpers.TYPE_SVGS
 import org.fossify.gallery.helpers.TYPE_VIDEOS
+import org.fossify.gallery.helpers.VIDEO_PLAYER_APP
+import org.fossify.gallery.helpers.VIDEO_PLAYER_SYSTEM
 import org.fossify.gallery.models.Medium
 import org.fossify.gallery.models.ThumbnailItem
 import java.io.File
@@ -122,17 +125,29 @@ class DuplicateFilesActivity : SimpleActivity() {
             media = media,
             showFolderNames = intent.getBooleanExtra(DUPLICATE_SHOW_FOLDER_NAMES, false)
         ) { medium ->
-            if (medium.isVideo() && config.openVideosOnSeparateScreen) {
-                launchVideoPlayer(medium.path)
-            } else {
-                Intent(this, ViewPagerActivity::class.java).apply {
-                    putExtra(PATH, medium.path)
-                    putExtra(SHOW_ALL, false)
-                    startActivity(this)
+            if (medium.isVideo()) {
+                when (config.videoPlayerType) {
+                    VIDEO_PLAYER_SYSTEM -> openPath(medium.path, forceChooser = false)
+                    VIDEO_PLAYER_APP -> if (config.gestureVideoPlayer) {
+                        launchGesturePlayer(medium.path)
+                    } else {
+                        openInViewPager(medium.path)
+                    }
+                    else -> openInViewPager(medium.path)
                 }
+            } else {
+                openInViewPager(medium.path)
             }
         }
         binding.duplicateFilesGrid.beVisible()
+    }
+
+    private fun openInViewPager(path: String) {
+        Intent(this, ViewPagerActivity::class.java).apply {
+            putExtra(PATH, path)
+            putExtra(SHOW_ALL, false)
+            startActivity(this)
+        }
     }
 
     private fun fileToMedium(file: File): Medium? {
