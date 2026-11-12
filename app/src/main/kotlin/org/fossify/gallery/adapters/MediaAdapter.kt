@@ -103,6 +103,8 @@ class MediaAdapter(
     val allowMultiplePicks: Boolean,
     val path: String,
     recyclerView: MyRecyclerView,
+    private val isDuplicateSelectionMode: Boolean = false,
+    private val mediumLabel: ((Medium) -> String)? = null,
     itemClick: (Any) -> Unit
 ) : MyRecyclerViewAdapter(activity, recyclerView, itemClick),
     RecyclerViewFastScroller.OnPopupTextUpdate {
@@ -113,7 +115,7 @@ class MediaAdapter(
 
     private val config = activity.config
     private val viewType = config.getFolderViewType(if (config.showAll) SHOW_ALL else path)
-    private val isListViewType = viewType == VIEW_TYPE_LIST
+    private val isListViewType = !isDuplicateSelectionMode && viewType == VIEW_TYPE_LIST
     private var rotatedImagePaths = ArrayList<String>()
     private var currentMediaHash = media.hashCode()
     private val hasOTGConnected = activity.hasOTGConnected()
@@ -132,7 +134,7 @@ class MediaAdapter(
         setupDragListener(true)
     }
 
-    override fun getActionMenuId() = R.menu.cab_media
+    override fun getActionMenuId() = if (isDuplicateSelectionMode) R.menu.cab_duplicate_files else R.menu.cab_media
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = if (viewType == ITEM_SECTION) {
@@ -185,6 +187,12 @@ class MediaAdapter(
             return
         }
 
+        if (isDuplicateSelectionMode) {
+            menu.findItem(R.id.cab_delete).isVisible = true
+            menu.findItem(R.id.cab_select_all).isVisible = true
+            return
+        }
+
         val isOneItemSelected = isOneItemSelected()
         val selectedPaths = selectedItems.map { it.path } as ArrayList<String>
         val isInRecycleBin = selectedItems.firstOrNull()?.getIsInRecycleBin() == true
@@ -213,6 +221,14 @@ class MediaAdapter(
 
     override fun actionItemPressed(id: Int) {
         if (selectedKeys.isEmpty()) {
+            return
+        }
+
+        if (isDuplicateSelectionMode) {
+            when (id) {
+                R.id.cab_delete -> checkDeleteConfirmation()
+                R.id.cab_select_all -> selectAll()
+            }
             return
         }
 
@@ -713,8 +729,10 @@ class MediaAdapter(
                 fileType?.beGone()
             }
 
-            mediumName.beVisibleIf(displayFilenames || isListViewType)
-            mediumName.text = medium.name
+            mediumName.beVisibleIf(
+                if (isDuplicateSelectionMode) mediumLabel != null else displayFilenames || isListViewType
+            )
+            mediumName.text = mediumLabel?.invoke(medium) ?: medium.name
             mediumName.tag = medium.path
 
             val showVideoDuration = medium.isVideo() && config.showThumbnailVideoDuration
