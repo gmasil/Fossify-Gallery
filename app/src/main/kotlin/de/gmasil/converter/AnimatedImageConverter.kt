@@ -94,7 +94,8 @@ class AnimatedImageConverter(private val applicationContext: Context) {
             return false
         }
         val tmpFile = File(targetFolder, "output.mp4")
-        val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx265 -crf 28 -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map_metadata 0 -map_metadata:s:v 0:s:v \"${tmpFile.absolutePath}\""
+        // val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec hevc_mediacodec -crf 28 -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map_metadata 0 -map_metadata:s:v 0:s:v \"${tmpFile.absolutePath}\""
+        val ffmpegCommand = "-i \"$filePath\" -vf \"scale=-2:720\" -c:v h264_mediacodec -b:v 1.5M -c:a aac \"${tmpFile.absolutePath}\""
         Log.i(NAME, "ffmpeg $ffmpegCommand")
 
         val totalFrames = getTotalFrames(filePath)
@@ -236,7 +237,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         val inventoryFile = File(folder, "input.txt")
         inventoryFile.writeText(inventory.toString())
         // convert video
-        val ffmpegCommand = "-r $inputFramerate -f concat -safe 0 -i ${inventoryFile.absolutePath} -r $outputFramerate -vcodec libx264 -pix_fmt yuv420p -crf 24 -preset slow -vf \"fps=${outputFramerate},pad=ceil(iw/2)*2:ceil(ih/2)*2\" -movflags +faststart $targetFile"
+        val ffmpegCommand = "-r $inputFramerate -f concat -safe 0 -i ${inventoryFile.absolutePath} -r $outputFramerate -vcodec hevc_mediacodec -pix_fmt yuv420p -crf 24 -preset slow -vf \"fps=${outputFramerate},pad=ceil(iw/2)*2:ceil(ih/2)*2\" -movflags +faststart $targetFile"
         Log.i(NAME, "ffmpeg $ffmpegCommand")
         return execFfmpegWithProgress(ffmpegCommand, frameCount, converterProgress, "Converting")
     }
@@ -332,7 +333,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         if (File(targetFile).exists()) {
             return true;
         }
-        val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec libx264 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
+        val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec hevc_mediacodec -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
         Log.i(NAME, "ffmpeg $ffmpegCommand")
         var totalFrames = 0
         if(converterProgress != null){
