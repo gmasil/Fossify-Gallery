@@ -18,6 +18,7 @@ import org.fossify.commons.extensions.recycleBinPath
 import org.fossify.commons.extensions.toast
 import org.fossify.commons.extensions.viewBinding
 import org.fossify.commons.helpers.NavigationIcon
+import org.fossify.commons.helpers.IS_FROM_GALLERY
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.models.FileDirItem
 import org.fossify.gallery.R
@@ -27,7 +28,7 @@ import org.fossify.gallery.extensions.config
 import org.fossify.gallery.extensions.deleteDBPath
 import org.fossify.gallery.extensions.launchGesturePlayer
 import org.fossify.gallery.extensions.movePathsInRecycleBin
-import org.fossify.gallery.extensions.openPath
+import org.fossify.gallery.extensions.openPathWithViewerMedia
 import org.fossify.gallery.helpers.DUPLICATE_SCAN_FOLDERS
 import org.fossify.gallery.helpers.DUPLICATE_SHOW_FOLDER_NAMES
 import org.fossify.gallery.helpers.DuplicateFileFinder
@@ -40,6 +41,7 @@ import org.fossify.gallery.helpers.TYPE_SVGS
 import org.fossify.gallery.helpers.TYPE_VIDEOS
 import org.fossify.gallery.helpers.VIDEO_PLAYER_APP
 import org.fossify.gallery.helpers.VIDEO_PLAYER_SYSTEM
+import org.fossify.gallery.helpers.VIEWER_MEDIA
 import org.fossify.gallery.interfaces.MediaOperationsListener
 import org.fossify.gallery.models.Medium
 import org.fossify.gallery.models.ThumbnailItem
@@ -147,7 +149,17 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
             val medium = item as? Medium ?: return@MediaAdapter
             if (medium.isVideo()) {
                 when (config.videoPlayerType) {
-                    VIDEO_PLAYER_SYSTEM -> openPath(medium.path, forceChooser = false)
+                    VIDEO_PLAYER_SYSTEM -> {
+                        val visibleMedia = ArrayList(
+                            (binding.duplicateFilesGrid.adapter as? MediaAdapter)?.media?.filterIsInstance<Medium>().orEmpty()
+                        )
+                        openPathWithViewerMedia(
+                            path = medium.path,
+                            forceChooser = false,
+                            media = visibleMedia,
+                            extras = hashMapOf(IS_FROM_GALLERY to true)
+                        )
+                    }
                     VIDEO_PLAYER_APP -> if (config.gestureVideoPlayer) {
                         launchGesturePlayer(medium.path)
                     } else {
@@ -221,6 +233,10 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
         Intent(this, ViewPagerActivity::class.java).apply {
             putExtra(PATH, path)
             putExtra(SHOW_ALL, false)
+            val visibleMedia = ArrayList(
+                (binding.duplicateFilesGrid.adapter as? MediaAdapter)?.media?.filterIsInstance<Medium>().orEmpty()
+            )
+            putExtra(VIEWER_MEDIA, visibleMedia)
             startActivity(this)
         }
     }

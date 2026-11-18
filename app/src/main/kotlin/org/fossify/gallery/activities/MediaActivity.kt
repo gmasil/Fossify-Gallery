@@ -79,7 +79,7 @@ import org.fossify.gallery.extensions.launchSettings
 import org.fossify.gallery.extensions.launchGesturePlayer
 import org.fossify.gallery.extensions.mediaDB
 import org.fossify.gallery.extensions.movePathsInRecycleBin
-import org.fossify.gallery.extensions.openPath
+import org.fossify.gallery.extensions.openPathWithViewerMedia
 import org.fossify.gallery.extensions.openRecycleBin
 import org.fossify.gallery.extensions.restoreRecycleBinPaths
 import org.fossify.gallery.extensions.showRecycleBinEmptyingDialog
@@ -108,6 +108,7 @@ import org.fossify.gallery.helpers.SKIP_AUTHENTICATION
 import org.fossify.gallery.helpers.SLIDESHOW_START_ON_ENTER
 import org.fossify.gallery.helpers.VIDEO_PLAYER_APP
 import org.fossify.gallery.helpers.VIDEO_PLAYER_SYSTEM
+import org.fossify.gallery.helpers.VIEWER_MEDIA
 import org.fossify.gallery.interfaces.MediaOperationsListener
 import org.fossify.gallery.models.Medium
 import org.fossify.gallery.models.ThumbnailItem
@@ -940,6 +941,8 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     private fun isSetWallpaperIntent() = intent.getBooleanExtra(SET_WALLPAPER_INTENT, false)
 
     private fun itemClicked(path: String) {
+        // hideKeyboard clears focus, so snapshot the filtered adapter contents before calling it.
+        val visibleMedia = ArrayList(getMediaAdapter()?.media?.filterIsInstance<Medium>().orEmpty())
         hideKeyboard()
         if (isSetWallpaperIntent()) {
             toast(R.string.setting_wallpaper)
@@ -979,19 +982,19 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
         } else {
             mWasFullscreenViewOpen = true
             if (!path.isVideoFast()) {
-                openInViewPager(path)
+                openInViewPager(path, visibleMedia)
                 return
             }
 
             when (config.videoPlayerType) {
-                VIDEO_PLAYER_SYSTEM -> openSystemDefaultPlayer(path)
-                VIDEO_PLAYER_APP -> if (config.gestureVideoPlayer) launchGesturePlayer(path) else openInViewPager(path)
-                else -> openInViewPager(path) // unreachable by design
+                VIDEO_PLAYER_SYSTEM -> openSystemDefaultPlayer(path, visibleMedia)
+                VIDEO_PLAYER_APP -> if (config.gestureVideoPlayer) launchGesturePlayer(path) else openInViewPager(path, visibleMedia)
+                else -> openInViewPager(path, visibleMedia) // unreachable by design
             }
         }
     }
 
-    private fun openInViewPager(path: String) {
+    private fun openInViewPager(path: String, visibleMedia: ArrayList<Medium>) {
         Intent(this, ViewPagerActivity::class.java).apply {
             putExtra(SKIP_AUTHENTICATION, shouldSkipAuthentication())
             putExtra(PATH, path)
@@ -999,14 +1002,16 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
             putExtra(SHOW_FAVORITES, mPath == FAVORITES)
             putExtra(SHOW_RECYCLE_BIN, mPath == RECYCLE_BIN)
             putExtra(IS_FROM_GALLERY, true)
+            putExtra(VIEWER_MEDIA, visibleMedia)
             startActivity(this)
         }
     }
 
-    private fun openSystemDefaultPlayer(path: String) {
-        openPath(
+    private fun openSystemDefaultPlayer(path: String, visibleMedia: ArrayList<Medium>) {
+        openPathWithViewerMedia(
             path = path,
             forceChooser = false,
+            media = visibleMedia,
             extras = hashMapOf(SHOW_FAVORITES to (mPath == FAVORITES)).apply {
                 if (path.startsWith(recycleBinPath)) put(IS_IN_RECYCLE_BIN, true)
                 if (shouldSkipAuthentication()) put(SKIP_AUTHENTICATION, true)

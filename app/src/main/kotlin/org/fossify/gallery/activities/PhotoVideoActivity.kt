@@ -74,6 +74,9 @@ import org.fossify.gallery.helpers.TYPE_PORTRAITS
 import org.fossify.gallery.helpers.TYPE_RAWS
 import org.fossify.gallery.helpers.TYPE_SVGS
 import org.fossify.gallery.helpers.TYPE_VIDEOS
+import org.fossify.gallery.helpers.VIEWER_MEDIA
+import org.fossify.gallery.helpers.VIEWER_MEDIA_FROM_CURRENT_VIEW
+import org.fossify.gallery.helpers.ViewerMediaStore
 import org.fossify.gallery.models.Medium
 import java.io.File
 
@@ -189,7 +192,11 @@ open class PhotoVideoActivity : BaseViewerActivity(), ViewPagerFragment.Fragment
 
         var filename = getFilenameFromUri(mUri!!)
         mIsFromGallery = intent.getBooleanExtra(IS_FROM_GALLERY, false)
-        if (mIsFromGallery && filename.isVideoFast() && config.gestureVideoPlayer) {
+        // A gallery-originated video must pass through ViewPager when its current-view list is pending.
+        if (
+            mIsFromGallery && filename.isVideoFast() && config.gestureVideoPlayer
+            && !intent.getBooleanExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, false)
+        ) {
             launchGesturePlayer()
             return
         }
@@ -307,6 +314,12 @@ open class PhotoVideoActivity : BaseViewerActivity(), ViewPagerFragment.Fragment
     }
 
     private fun openViewPager(path: String) {
+        val visibleMedia = if (intent.getBooleanExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, false)) {
+            ViewerMediaStore.take(path)
+        } else {
+            null
+        }
+
         if (!intent.getBooleanExtra(IS_FROM_GALLERY, false)) {
             MediaActivity.mMedia.clear()
         }
@@ -318,6 +331,7 @@ open class PhotoVideoActivity : BaseViewerActivity(), ViewPagerFragment.Fragment
                 putExtra(IS_VIEW_INTENT, true)
                 putExtra(IS_FROM_GALLERY, mIsFromGallery)
                 putExtra(PATH, path)
+                visibleMedia?.let { putExtra(VIEWER_MEDIA, it) }
                 startActivity(this)
             }
         }

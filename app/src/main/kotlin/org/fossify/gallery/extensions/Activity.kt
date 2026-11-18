@@ -52,6 +52,8 @@ import org.fossify.gallery.dialogs.ResizeWithPathDialog
 import org.fossify.gallery.helpers.DIRECTORY
 import org.fossify.gallery.helpers.RECYCLE_BIN
 import org.fossify.gallery.helpers.TEMP_FOLDER_NAME
+import org.fossify.gallery.helpers.VIEWER_MEDIA_FROM_CURRENT_VIEW
+import org.fossify.gallery.helpers.ViewerMediaStore
 import org.fossify.gallery.models.DateTaken
 import org.fossify.gallery.models.Medium
 import java.io.*
@@ -95,6 +97,21 @@ fun Activity.setAs(path: String) {
 
 fun Activity.openPath(path: String, forceChooser: Boolean, extras: HashMap<String, Boolean> = HashMap()) {
     openPathIntent(path, forceChooser, BuildConfig.APPLICATION_ID, extras = extras)
+}
+
+// Keep this list in-process: the implicit ACTION_VIEW intent may be handled by this app's VideoActivity.
+fun Activity.openPathWithViewerMedia(
+    path: String,
+    forceChooser: Boolean,
+    media: ArrayList<Medium>,
+    extras: HashMap<String, Boolean> = HashMap()
+) {
+    ViewerMediaStore.store(path, media)
+    val viewerExtras = HashMap(extras).apply {
+        put(IS_FROM_GALLERY, true)
+        put(VIEWER_MEDIA_FROM_CURRENT_VIEW, true)
+    }
+    openPath(path, forceChooser, viewerExtras)
 }
 
 fun Activity.launchGesturePlayer(path: String, extras: HashMap<String, Boolean> = HashMap()) {

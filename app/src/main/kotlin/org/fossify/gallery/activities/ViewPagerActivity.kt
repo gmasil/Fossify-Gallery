@@ -168,6 +168,7 @@ import org.fossify.gallery.helpers.SHOW_NEXT_ITEM
 import org.fossify.gallery.helpers.SHOW_PREV_ITEM
 import org.fossify.gallery.helpers.SHOW_RECYCLE_BIN
 import org.fossify.gallery.helpers.SKIP_AUTHENTICATION
+import org.fossify.gallery.helpers.VIEWER_MEDIA
 import org.fossify.gallery.helpers.SLIDESHOW_ANIMATION_FADE
 import org.fossify.gallery.helpers.SLIDESHOW_ANIMATION_NONE
 import org.fossify.gallery.helpers.SLIDESHOW_ANIMATION_SLIDE
@@ -199,6 +200,7 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
     private var mIsFullScreen = false
     private var mPos = -1
     private var mShowAll = false
+    private var mUsesProvidedMedia = false
     private var mIsSlideshowActive = false
     private var mPrevHashcode = 0
 
@@ -235,7 +237,14 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
         refreshMenuItems()
 
         window.decorView.setBackgroundColor(getProperBackgroundColor())
-        (MediaActivity.mMedia.clone() as ArrayList<ThumbnailItem>).filterIsInstanceTo(mMediaFiles, Medium::class.java)
+        val providedMedia = (intent.getSerializableExtra(VIEWER_MEDIA) as? ArrayList<*>)
+            ?.filterIsInstance<Medium>()
+        if (!providedMedia.isNullOrEmpty()) {
+            mMediaFiles.addAll(providedMedia)
+            mUsesProvidedMedia = true
+        } else {
+            (MediaActivity.mMedia.clone() as ArrayList<ThumbnailItem>).filterIsInstanceTo(mMediaFiles, Medium::class.java)
+        }
 
         requestMediaPermissions {
             initViewPager(
@@ -1334,6 +1343,11 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
     }
 
     private fun refreshViewPager(refetchPosition: Boolean = false) {
+        if (mUsesProvidedMedia) {
+            gotMedia(mMediaFiles as ArrayList<ThumbnailItem>, refetchViewPagerPosition = refetchPosition)
+            return
+        }
+
         val isRandomSorting = config.getFolderSorting(mDirectory) and SORT_BY_RANDOM != 0
         if (!isRandomSorting || isExternalIntent()) {
             GetMediaAsynctask(applicationContext, mDirectory, isPickImage = false, isPickVideo = false, showAll = mShowAll) {

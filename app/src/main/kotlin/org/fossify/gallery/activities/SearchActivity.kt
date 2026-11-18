@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import org.fossify.commons.extensions.*
 import org.fossify.commons.helpers.VIEW_TYPE_GRID
+import org.fossify.commons.helpers.IS_FROM_GALLERY
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.models.FileDirItem
 import org.fossify.commons.views.MyGridLayoutManager
@@ -22,6 +23,8 @@ import org.fossify.gallery.helpers.PATH
 import org.fossify.gallery.helpers.SHOW_ALL
 import org.fossify.gallery.helpers.VIDEO_PLAYER_APP
 import org.fossify.gallery.helpers.VIDEO_PLAYER_SYSTEM
+import org.fossify.gallery.helpers.VIEWER_MEDIA
+import org.fossify.gallery.extensions.openPathWithViewerMedia
 import org.fossify.gallery.interfaces.MediaOperationsListener
 import org.fossify.gallery.models.Medium
 import org.fossify.gallery.models.ThumbnailItem
@@ -166,7 +169,15 @@ class SearchActivity : SimpleActivity(), MediaOperationsListener {
         }
 
         when (config.videoPlayerType) {
-            VIDEO_PLAYER_SYSTEM -> openPath(path = path, forceChooser = false)
+            VIDEO_PLAYER_SYSTEM -> {
+                val visibleMedia = ArrayList(getMediaAdapter()?.media?.filterIsInstance<Medium>().orEmpty())
+                openPathWithViewerMedia(
+                    path = path,
+                    forceChooser = false,
+                    media = visibleMedia,
+                    extras = hashMapOf(IS_FROM_GALLERY to true)
+                )
+            }
             VIDEO_PLAYER_APP -> if (config.gestureVideoPlayer) launchGesturePlayer(path) else openInViewPager(path)
             else -> openInViewPager(path) // unreachable by design
         }
@@ -176,6 +187,8 @@ class SearchActivity : SimpleActivity(), MediaOperationsListener {
         Intent(this, ViewPagerActivity::class.java).apply {
             putExtra(PATH, path)
             putExtra(SHOW_ALL, false)
+            val visibleMedia = ArrayList(getMediaAdapter()?.media?.filterIsInstance<Medium>().orEmpty())
+            putExtra(VIEWER_MEDIA, visibleMedia)
             startActivity(this)
         }
     }
