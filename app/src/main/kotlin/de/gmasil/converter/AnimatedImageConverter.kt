@@ -7,7 +7,6 @@ import android.util.Log
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegSessionCompleteCallback
 import com.arthenica.ffmpegkit.FFprobeKit
-import com.arthenica.ffmpegkit.FFprobeSession
 import com.arthenica.ffmpegkit.ReturnCode
 import com.arthenica.ffmpegkit.StatisticsCallback
 import de.gmasil.converter.api.AnimatedImageHandler
@@ -18,138 +17,124 @@ import org.fossify.commons.extensions.toast
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
-
 
 class AnimatedImageConverter(private val applicationContext: Context) {
 
     companion object {
         const val FILE_PADDING = 6
         const val NAME = "AnimatedImageConverter"
+        private const val STILL_IMAGE_VIDEO_DURATION_SECONDS = 3
+        private const val VIDEO_FRAME_RATE = 30
     }
+
+    private val converterCacheDir: File
+        get() = applicationContext.cacheDir.resolve("converter")
 
     fun handleMediaForSharing(filePath: String, converterProgress: ConverterProgress?): File {
-        if (filePath.lowercase().endsWith(".webp")) {
-            return convertWebpToGif(filePath, converterProgress)
-        } else if(filePath.lowercase().endsWith(".mp4")) {
-            applicationContext.toast("Converting to gif...")
-            return convertVideoToGif(filePath, converterProgress)
-        } else if(filePath.lowercase().endsWith(".webm")) {
-            applicationContext.toast("Converting to gif...")
-            return convertVideoToGif(filePath, converterProgress)
-        } else if(isNormalImageFile(filePath)) {
-            return ensureSharableFileSize(filePath)
-        } else {
-            return File(filePath)
+        val extension = filePath.fileExtension()
+        return when {
+            extension == "webp" -> convertWebpToGif(filePath, converterProgress)
+            extension == "mp4" || extension == "webm" -> {
+                applicationContext.toast("Converting to gif...")
+                convertVideoToGif(filePath, converterProgress)
+            }
+            isNormalImageFile(filePath) -> ensureSharableFileSize(filePath)
+            else -> File(filePath)
         }
     }
 
-    private fun ensureSharableFileSize(filePath: String): File {
-        val targetFolder = applicationContext.cacheDir.resolve("converter")
-        val targetFile = targetFolder.resolve("resized.jpg")
-        // prepare folder structure
-        targetFolder.deleteRecursively();
-        targetFolder.mkdirs()
-        // load image
-        val bmOptions = BitmapFactory.Options()
-        bmOptions.inJustDecodeBounds = false
-        val image = BitmapFactory.decodeFile(filePath, bmOptions)
-        // save file, re-encode as JPG
-        FileOutputStream(targetFile).use { out ->
-            image.compress(Bitmap.CompressFormat.JPEG, 90, out)
+    private fun ensureSharableFileSize(filePath: String): File = withWorkspace { workspace ->
+        val outputFile = workspace.resolve("resized.jpg")
+        val image = BitmapFactory.decodeFile(filePath)
+            ?: throw IllegalArgumentException("Could not decode image '$filePath'")
+        FileOutputStream(outputFile).use { output ->
+            check(image.compress(Bitmap.CompressFormat.JPEG, 90, output)) {
+                "Could not encode image '$filePath'"
+            }
         }
-        return targetFile
+        cacheResult(outputFile)
     }
 
     fun reduceFileSize(filePath: String, replace: Boolean, converterProgress: ConverterProgress?): Boolean {
-        if(filePath.lowercase().endsWith(".webp")) {
-            // check if it is a single image webp
-            if(isAnimatedWebp(filePath)){
-                return false
+        return when (filePath.fileExtension()) {
+            "webp" -> if (isAnimatedWebp(filePath)) false else reduceStillImageSize(filePath, replace)
+            "gif" -> if (isAnimatedGif(filePath)) false else reduceStillImageSize(filePath, replace)
+            "png", "jpg", "jpeg", "bmp" -> reduceStillImageSize(filePath, replace)
+            "mp4", "webm" -> reduceVideoSize(filePath, replace, converterProgress)
+            else -> {
+                val fileType = filePath.substringAfterLast('.', filePath)
+                applicationContext.toast("Unsupported file type: .$fileType")
+                false
             }
-            return reduceStillImageSize(filePath, replace)
-        } else if(filePath.lowercase().endsWith(".gif")) {
-            // check if it is a single image gif
-            if(isAnimatedGif(filePath)){
-                return false
-            }
-            return reduceStillImageSize(filePath, replace)
-        } else if (isNormalImageFile(filePath)) {
-            return reduceStillImageSize(filePath, replace)
-        } else if(listOf(".mp4", ".webm").any { filePath.lowercase().endsWith(it) }) {
-            return reduceVideoSize(filePath, replace, converterProgress)
-        } else {
-            val fileType = filePath.substring(filePath.lastIndexOf("."), filePath.length)
-            applicationContext.toast("Unsupported file type: $fileType")
-            return false
         }
     }
 
     fun reduceVideoSize(filePath: String, replace: Boolean, converterProgress: ConverterProgress?): Boolean {
-        val targetFolder = applicationContext.cacheDir.resolve("converter")
-        targetFolder.deleteRecursively()
-        targetFolder.mkdirs()
-        val targetFile = File(filePath.take(filePath.lastIndexOf(".")) + if(replace) ".mp4" else "_reduced.mp4")
-        if(!replace && targetFile.exists()) {
+        val sourceFile = File(filePath)
+        val targetFile = File(
+            filePath.substringBeforeLast('.') + if (replace) ".mp4" else "_reduced.mp4"
+        )
+        if (!replace && targetFile.exists()) {
             return false
         }
-        val tmpFile = File(targetFolder, "output.mp4")
-        // val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec hevc_mediacodec -crf 28 -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map_metadata 0 -map_metadata:s:v 0:s:v \"${tmpFile.absolutePath}\""
-        val ffmpegCommand = "-i \"$filePath\" -vf \"scale=-2:720\" -c:v h264_mediacodec -b:v 1.5M -c:a aac \"${tmpFile.absolutePath}\""
-        Log.i(NAME, "ffmpeg $ffmpegCommand")
 
-        val totalFrames = getTotalFrames(filePath)
+        val lastModified = sourceFile.lastModified()
+        val sourceSize = sourceFile.length()
+        val reduced = withWorkspace { workspace ->
+            val outputFile = workspace.resolve("output.mp4")
+            val command = "-i ${quote(filePath)} -vf \"scale=-2:720\" -c:v h264_mediacodec -b:v 1.5M -c:a aac ${quote(outputFile.absolutePath)}"
+            Log.i(NAME, "ffmpeg $command")
+            val totalFrames = if (converterProgress == null) 0 else getTotalFrames(filePath)
+            if (!runFfmpeg(command, totalFrames, converterProgress, "Converting", outputFile)) {
+                return@withWorkspace false
+            }
+            Log.i(NAME, "Old size $sourceSize, new size ${outputFile.length()}")
+            if (outputFile.length() >= sourceSize) {
+                return@withWorkspace false
+            }
+            publishCompletedFile(outputFile, targetFile, replace, lastModified)
+        }
 
-        if(!execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress, "Converting")) {
-            return false
-        }
-        // check if new file is smaller
-        Log.i(NAME, "Old size ${File(filePath).length()}, new size ${tmpFile.length()}")
-        if(tmpFile.length() >= File(filePath).length()) {
-            tmpFile.delete()
-            return false
-        }
-        // target file might be input filePath, so store lastModified first
-        val lastModified = File(filePath).lastModified()
-        targetFile.delete()
-        tmpFile.copyTo(targetFile)
-        tmpFile.delete()
-        targetFile.setLastModified(lastModified)
-        return true
+        return reduced && (!replace || deleteOriginalAfterReplacement(sourceFile, targetFile))
     }
-
-
 
     fun reduceStillImageSize(filePath: String, replace: Boolean): Boolean {
-        val targetFile = filePath.take(filePath.lastIndexOf(".")) + "_reduced.jpg"
-        // load image
-        val bmOptions = BitmapFactory.Options()
-        bmOptions.inJustDecodeBounds = false
-        val image = BitmapFactory.decodeFile(filePath, bmOptions)
-        // save file, re-encode as JPG
-        FileOutputStream(targetFile).use { out ->
-            image.compress(Bitmap.CompressFormat.JPEG, 90, out)
-        }
-        val lastModified = File(filePath).lastModified()
-        val isNewFileSmaller = File(targetFile).length() < File(filePath).length()
-        if (!isNewFileSmaller) {
-            File(targetFile).delete()
+        val sourceFile = File(filePath)
+        val targetFile = File(
+            filePath.substringBeforeLast('.') + if (replace) ".jpg" else "_reduced.jpg"
+        )
+        if (!replace && targetFile.exists()) {
             return false
-        } else if(replace) {
-            val replaceFile = filePath.take(filePath.lastIndexOf(".")) + ".jpg"
-            File(filePath).delete()
-            File(targetFile).copyTo(File(replaceFile))
-            File(targetFile).delete()
-            File(replaceFile).setLastModified(lastModified)
-        } else {
-            File(targetFile).setLastModified(lastModified)
         }
-        return true
+
+        val lastModified = sourceFile.lastModified()
+        val sourceSize = sourceFile.length()
+        val reduced = withWorkspace { workspace ->
+            val outputFile = workspace.resolve("output.jpg")
+            val image = BitmapFactory.decodeFile(filePath) ?: return@withWorkspace false
+            FileOutputStream(outputFile).use { output ->
+                if (!image.compress(Bitmap.CompressFormat.JPEG, 90, output)) {
+                    return@withWorkspace false
+                }
+            }
+            if (outputFile.length() >= sourceSize) {
+                return@withWorkspace false
+            }
+            publishCompletedFile(outputFile, targetFile, replace, lastModified)
+        }
+
+        return reduced && (!replace || deleteOriginalAfterReplacement(sourceFile, targetFile))
     }
 
-    private fun isNormalImageFile(filePath: String): Boolean {
-        return listOf(".png", ".jpg", ".jpeg", ".bmp").any { filePath.lowercase().endsWith(it) }
-    }
+    private fun isNormalImageFile(filePath: String): Boolean =
+        filePath.fileExtension() in setOf("png", "jpg", "jpeg", "bmp")
 
     fun isAnimatedWebp(filePath: String): Boolean {
         val imageHandler: AnimatedImageHandler = WebpImageHandler(filePath, applicationContext)
@@ -161,249 +146,392 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         return imageHandler.countFrames() != 1
     }
 
-    private fun convertWebpToGif(filePath: String, converterProgress: ConverterProgress?): File {
-        val imageHandler: AnimatedImageHandler = WebpImageHandler(filePath, applicationContext)
-        val targetFolder = applicationContext.cacheDir.resolve("converter").absolutePath
-        val frameCount = imageHandler.countFrames()
-        if (frameCount > 1) {
-            // animated
-            applicationContext.toast("Converting to gif...")
-            Log.i(NAME, "Extracting frames from '$filePath'...")
-            val totalDelay = extractImages(imageHandler, targetFolder, converterProgress)
-            Log.i(NAME, "Total delay: $totalDelay, frames: $frameCount")
-            val videoTargetFile = "${targetFolder}/output.mp4"
-            val gifTargetFile = "${targetFolder}/output.gif"
-            if (createVideoFromImagesInFolder(targetFolder, videoTargetFile, totalDelay, frameCount, converterProgress)) {
-                if (convertVideoToGif(videoTargetFile, gifTargetFile, converterProgress)) {
-                    return File(gifTargetFile)
-                } else {
-                    throw IllegalStateException("Error while converting to gif")
-                }
-            } else {
-                throw IllegalStateException("Error while converting to video")
+    private fun convertWebpToGif(filePath: String, converterProgress: ConverterProgress?): File =
+        withWorkspace { workspace ->
+            val outputFile = workspace.resolve("output.gif")
+            if (!createAnimatedImageGif(filePath, outputFile, workspace, converterProgress)) {
+                throw IllegalStateException("Error while converting to gif")
             }
-        } else if (frameCount == 1) {
-            // not animated
-            extractImages(imageHandler, targetFolder, converterProgress)
-            // return the only extracted image as png
-            return File("$targetFolder/${"0".padStart(FILE_PADDING, '0')}.png")
-        } else {
+            cacheResult(outputFile)
+        }
+
+    private fun createAnimatedImageGif(
+        filePath: String,
+        outputFile: File,
+        workspace: File,
+        converterProgress: ConverterProgress?
+    ): Boolean {
+        val imageHandler = imageHandlerFor(filePath)
+        val extraction = extractImages(imageHandler, workspace.resolve("frames"), converterProgress)
+        if (extraction.files.size == 1) {
+            val command = "-i ${quote(extraction.files.single().absolutePath)} ${quote(outputFile.absolutePath)}"
+            Log.i(NAME, "ffmpeg $command")
+            return runFfmpeg(command, 1, converterProgress, "Converting", outputFile)
+        }
+
+        val videoFile = workspace.resolve("animation.mp4")
+        return createVideoFromImages(extraction, workspace, videoFile, converterProgress) &&
+            convertVideoToGif(videoFile.absolutePath, outputFile.absolutePath, converterProgress)
+    }
+
+    private fun imageHandlerFor(filePath: String): AnimatedImageHandler = when (filePath.fileExtension()) {
+        "webp" -> WebpImageHandler(filePath, applicationContext)
+        "gif" -> GifImageHandler(filePath, applicationContext)
+        else -> throw IllegalArgumentException("Given file '$filePath' is not a supported animated image type")
+    }
+
+    private data class ExtractedFrames(val files: List<File>, val delaysMillis: List<Int>)
+
+    private fun extractImages(
+        imageHandler: AnimatedImageHandler,
+        targetFolder: File,
+        converterProgress: ConverterProgress?
+    ): ExtractedFrames {
+        check(targetFolder.mkdirs() || targetFolder.isDirectory) {
+            "Could not create frame directory '${targetFolder.absolutePath}'"
+        }
+        val frameCount = imageHandler.countFrames()
+        if (frameCount <= 0) {
             throw IllegalStateException("File is corrupt")
         }
-    }
 
-    private fun extractImages(imageHandler: AnimatedImageHandler, targetFolder: String, converterProgress: ConverterProgress?): Int {
-        // prepare folder structure
-        File(targetFolder).deleteRecursively();
-        File(targetFolder).mkdirs()
-        // extract images
-        val frameCount = imageHandler.countFrames()
-        var totalDelay = 0
+        val files = mutableListOf<File>()
+        val delays = mutableListOf<Int>()
         imageHandler.advanceFrame()
-        for (i in 0 until frameCount) {
-            val delay = imageHandler.getDelay()
-            totalDelay += delay
+        for (index in 0 until frameCount) {
+            val frameFile = targetFolder.resolve("${index.toString().padStart(FILE_PADDING, '0')}.png")
             val bitmap = imageHandler.getFrame()
-            // save bitmap
-            if (bitmap != null) {
-                saveImage(bitmap, i, targetFolder)
-            } else {
-                Log.w(NAME, "bitmap #${i} is null")
-            }
-            // select next bitmap
+                ?: throw IllegalStateException("Could not decode frame #$index")
+            saveImage(bitmap, frameFile)
+            files.add(frameFile)
+            delays.add(imageHandler.getDelay().coerceAtLeast(1))
             imageHandler.advanceFrame()
-            converterProgress?.accept(i.toFloat() / frameCount.toFloat() * 100.0f, "Extracting")
+            converterProgress?.accept(index.toFloat() / frameCount * 100.0f, "Extracting")
         }
-        return totalDelay
+        return ExtractedFrames(files, delays)
     }
 
-    private fun saveImage(bitmap: Bitmap, i: Int, path: String) {
-        val file = File(path,"${i.toString().padStart(FILE_PADDING, '0')}.png")
-        val stream: OutputStream = FileOutputStream(file)
-        bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream)
-        stream.flush()
-        stream.close()
-    }
-
-    private fun createVideoFromImagesInFolder(folder: String, targetFile: String, totalDelay: Int, frameCount: Int, converterProgress: ConverterProgress?): Boolean {
-        // calculate framerate
-        val inputFramerate: Float  = frameCount / totalDelay.toFloat() * 1000
-        // force 30 FPS output for Telegram animations
-        val outputFramerate = 30
-        Log.i(NAME, "Input framerate: $inputFramerate, output framerate: $outputFramerate")
-        // create inventory file
-        val inventory = StringBuilder()
-        File(folder).listFiles()?.forEach { inventory.append("file '${it.absolutePath}'\n") }
-        val inventoryFile = File(folder, "input.txt")
-        inventoryFile.writeText(inventory.toString())
-        // convert video
-        val ffmpegCommand = "-r $inputFramerate -f concat -safe 0 -i ${inventoryFile.absolutePath} -r $outputFramerate -vcodec hevc_mediacodec -pix_fmt yuv420p -crf 24 -preset slow -vf \"fps=${outputFramerate},pad=ceil(iw/2)*2:ceil(ih/2)*2\" -movflags +faststart $targetFile"
-        Log.i(NAME, "ffmpeg $ffmpegCommand")
-        return execFfmpegWithProgress(ffmpegCommand, frameCount, converterProgress, "Converting")
-    }
-
-    private fun convertVideoToGif(filePath: String, targetFile: String, converterProgress: ConverterProgress?): Boolean {
-        val ffmpegCommand = "-i '$filePath' '$targetFile'"
-        Log.i(NAME, "ffmpeg $ffmpegCommand")
-        var totalFrames = 0
-        if(converterProgress != null){
-            totalFrames = getTotalFrames(filePath)
-        }
-        return execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress, "Converting")
-    }
-
-    private fun convertVideoToGif(filePath: String, converterProgress: ConverterProgress?): File {
-        val targetFolder = applicationContext.cacheDir.resolve("converter").absolutePath
-        // prepare folder structure
-        File(targetFolder).deleteRecursively();
-        File(targetFolder).mkdirs()
-        // convert to gif
-        val targetFile = "${targetFolder}/output.gif"
-        if (convertVideoToGif(filePath, targetFile, converterProgress)) {
-            return File(targetFile)
-        } else {
-            throw IllegalStateException("Error while converting to gif")
+    private fun saveImage(bitmap: Bitmap, file: File) {
+        FileOutputStream(file).use { stream: OutputStream ->
+            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
+                "Could not write frame '${file.absolutePath}'"
+            }
         }
     }
+
+    private fun createVideoFromImages(
+        extraction: ExtractedFrames,
+        workspace: File,
+        outputFile: File,
+        converterProgress: ConverterProgress?
+    ): Boolean {
+        val manifest = workspace.resolve("frames.txt")
+        val contents = buildString {
+            extraction.files.forEachIndexed { index, file ->
+                append("file '").append(escapeConcatPath(file.absolutePath)).append("'\n")
+                append("duration ")
+                    .append(String.format(Locale.US, "%.3f", extraction.delaysMillis[index] / 1000.0))
+                    .append('\n')
+            }
+            // Concat demuxer uses the next file timestamp to determine the last frame duration.
+            append("file '").append(escapeConcatPath(extraction.files.last().absolutePath)).append("'\n")
+        }
+        manifest.writeText(contents)
+
+        val filter = "fps=$VIDEO_FRAME_RATE,pad=ceil(iw/2)*2:ceil(ih/2)*2"
+        val command = "-f concat -safe 0 -i ${quote(manifest.absolutePath)} -vf \"$filter\" " +
+            "-r $VIDEO_FRAME_RATE -an -c:v h264_mediacodec -pix_fmt yuv420p -movflags +faststart ${quote(outputFile.absolutePath)}"
+        Log.i(NAME, "ffmpeg $command")
+        return runFfmpeg(command, extraction.files.size, converterProgress, "Converting", outputFile)
+    }
+
+    private fun createStillImageVideo(
+        imageFile: File,
+        outputFile: File,
+        converterProgress: ConverterProgress?
+    ): Boolean {
+        val filter = "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+        val command = "-loop 1 -i ${quote(imageFile.absolutePath)} -t $STILL_IMAGE_VIDEO_DURATION_SECONDS " +
+            "-vf \"$filter\" -r $VIDEO_FRAME_RATE -an -c:v h264_mediacodec -pix_fmt yuv420p " +
+            "-movflags +faststart ${quote(outputFile.absolutePath)}"
+        Log.i(NAME, "ffmpeg $command")
+        return runFfmpeg(command, 0, converterProgress, "Converting", outputFile)
+    }
+
+    private fun convertVideoToGif(
+        filePath: String,
+        targetFile: String,
+        converterProgress: ConverterProgress?
+    ): Boolean {
+        val command = "-i ${quote(filePath)} ${quote(targetFile)}"
+        Log.i(NAME, "ffmpeg $command")
+        val totalFrames = if (converterProgress == null) 0 else getTotalFrames(filePath)
+        return execFfmpegWithProgress(command, totalFrames, converterProgress, "Converting") &&
+            File(targetFile).isValidOutput()
+    }
+
+    private fun convertVideoToGif(filePath: String, converterProgress: ConverterProgress?): File =
+        withWorkspace { workspace ->
+            val outputFile = workspace.resolve("output.gif")
+            if (!convertVideoToGif(filePath, outputFile.absolutePath, converterProgress)) {
+                throw IllegalStateException("Error while converting to gif")
+            }
+            cacheResult(outputFile)
+        }
 
     fun convertVideoToGifInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
-        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".mp4"
-        if (File(targetFile).exists()) {
-            return true;
+        val targetFile = File(filePath.substringBeforeLast('.') + ".gif")
+        if (targetFile.exists()) {
+            return true
         }
-        return convertVideoToGif(filePath, targetFile, converterProgress)
+        val lastModified = File(filePath).lastModified()
+        return withWorkspace { workspace ->
+            val outputFile = workspace.resolve("output.gif")
+            if (!convertVideoToGif(filePath, outputFile.absolutePath, converterProgress)) {
+                return@withWorkspace false
+            }
+            publishCompletedFile(outputFile, targetFile, replace = false, lastModified = lastModified)
+        }
     }
 
-    fun convertAnimatedImageToGifInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
-        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".gif"
-        val tmpFile = convertAnimatedImageToVideo(filePath, converterProgress)
-        return convertVideoToGif(tmpFile.path, targetFile, converterProgress)
+    fun convertAnimatedImageToGifInSameFolder(
+        filePath: String,
+        converterProgress: ConverterProgress?
+    ): Boolean {
+        val targetFile = File(filePath.substringBeforeLast('.') + ".gif")
+        if (targetFile.exists()) {
+            return true
+        }
+        val lastModified = File(filePath).lastModified()
+        return withWorkspace { workspace ->
+            val outputFile = workspace.resolve("output.gif")
+            if (!createAnimatedImageGif(filePath, outputFile, workspace, converterProgress)) {
+                return@withWorkspace false
+            }
+            publishCompletedFile(outputFile, targetFile, replace = false, lastModified = lastModified)
+        }
     }
 
-    fun convertAnimatedImageToVideoInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
-        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".mp4"
-        if (File(targetFile).exists()) {
-            return true;
+    fun convertAnimatedImageToVideoInSameFolder(
+        filePath: String,
+        converterProgress: ConverterProgress?
+    ): Boolean {
+        val targetFile = File(filePath.substringBeforeLast('.') + ".mp4")
+        if (targetFile.exists()) {
+            return true
         }
-        val tmpFile = convertAnimatedImageToVideo(filePath, converterProgress)
-        tmpFile.let { sourceFile ->
-            sourceFile.copyTo(File(targetFile))
-            sourceFile.delete()
+        val lastModified = File(filePath).lastModified()
+        return withWorkspace { workspace ->
+            val outputFile = workspace.resolve("output.mp4")
+            if (!createAnimatedImageVideo(filePath, outputFile, workspace, converterProgress)) {
+                return@withWorkspace false
+            }
+            publishCompletedFile(outputFile, targetFile, replace = false, lastModified = lastModified)
         }
-        return true
     }
 
-    fun convertAnimatedImageToVideo(filePath: String, converterProgress: ConverterProgress?): File {
-        // select image type
-        var imageHandler: AnimatedImageHandler
-        if (filePath.lowercase().endsWith(".webp")) {
-            imageHandler = WebpImageHandler(filePath, applicationContext)
-        } else if(filePath.lowercase().endsWith(".gif")) {
-            imageHandler = GifImageHandler(filePath, applicationContext)
-        } else {
-            throw IllegalArgumentException("Given file '$filePath' is not a supported animated image type")
-        }
-        val targetFolder = applicationContext.cacheDir.resolve("converter").absolutePath
-        val frameCount = imageHandler.countFrames()
-        if (frameCount > 1) {
-            // animated
-            applicationContext.toast("Converting to video...")
-            Log.i(NAME, "Extracting frames from '$filePath'...")
-            val totalDelay = extractImages(imageHandler, targetFolder, converterProgress)
-            Log.i(NAME, "Total delay: $totalDelay, frames: $frameCount")
-            val targetFile = "${targetFolder}/output.mp4"
-            if (createVideoFromImagesInFolder(targetFolder, targetFile, totalDelay, frameCount, converterProgress)) {
-                Log.i(NAME, "ffmpeg finished successfully")
-                return File(targetFile)
-            } else {
+    fun convertAnimatedImageToVideo(filePath: String, converterProgress: ConverterProgress?): File =
+        withWorkspace { workspace ->
+            val outputFile = workspace.resolve("output.mp4")
+            if (!createAnimatedImageVideo(filePath, outputFile, workspace, converterProgress)) {
                 throw IllegalStateException("Error while converting to video")
             }
-        } else if (frameCount == 1) {
-            // not animated
-            extractImages(imageHandler, targetFolder, converterProgress)
-            // return the only extracted image as png
-            return File("$targetFolder/${"0".padStart(FILE_PADDING, '0')}.png")
+            cacheResult(outputFile)
+        }
+
+    private fun createAnimatedImageVideo(
+        filePath: String,
+        outputFile: File,
+        workspace: File,
+        converterProgress: ConverterProgress?
+    ): Boolean {
+        applicationContext.toast("Converting to video...")
+        Log.i(NAME, "Extracting frames from '$filePath'...")
+        val extraction = extractImages(imageHandlerFor(filePath), workspace.resolve("frames"), converterProgress)
+        return if (extraction.files.size == 1) {
+            createStillImageVideo(extraction.files.single(), outputFile, converterProgress)
         } else {
-            throw IllegalStateException("File is corrupt")
+            createVideoFromImages(extraction, workspace, outputFile, converterProgress)
         }
     }
 
     fun convertToVideoInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
-        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".mp4"
-        if (File(targetFile).exists()) {
-            return true;
-        }
-        val ffmpegCommand = "-i \"$filePath\" -movflags +faststart -vcodec hevc_mediacodec -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
-        Log.i(NAME, "ffmpeg $ffmpegCommand")
-        var totalFrames = 0
-        if(converterProgress != null){
-            totalFrames = getTotalFrames(filePath)
-        }
-        if(execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress, "Converting")) {
+        val targetFile = File(filePath.substringBeforeLast('.') + ".mp4")
+        if (targetFile.exists()) {
             return true
-        } else {
-            if (File(targetFile).exists()) {
-                File(targetFile).delete()
-            }
-            return false
+        }
+        return convertToTarget(filePath, targetFile, "mp4", converterProgress) { outputFile ->
+            "-i ${quote(filePath)} -movflags +faststart -vcodec h264_mediacodec " +
+                "-pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" ${quote(outputFile.absolutePath)}"
         }
     }
 
     fun convertToWebpInSameFolder(filePath: String, converterProgress: ConverterProgress?): Boolean {
-        val targetFile = filePath.take(filePath.lastIndexOf(".")) + ".webp"
-        if (File(targetFile).exists()) {
+        val targetFile = File(filePath.substringBeforeLast('.') + ".webp")
+        if (targetFile.exists()) {
             return true
         }
-        val ffmpegCommand = "-i \"$filePath\" -vcodec webp -loop 0 -pix_fmt yuva420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"$targetFile\""
-        Log.i(NAME, "ffmpeg $ffmpegCommand")
-        var totalFrames = 0
-        if(converterProgress != null){
-            totalFrames = getTotalFrames(filePath)
-        }
-        if(execFfmpegWithProgress(ffmpegCommand, totalFrames, converterProgress, "Converting")) {
-            return true;
-        } else {
-            if (File(targetFile).exists()) {
-                File(targetFile).delete()
-            }
-            return false
+        return convertToTarget(filePath, targetFile, "webp", converterProgress) { outputFile ->
+            "-i ${quote(filePath)} -vcodec webp -loop 0 -pix_fmt yuva420p " +
+                "-vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" ${quote(outputFile.absolutePath)}"
         }
     }
 
-    fun execFfmpegWithProgress(ffmpegCommand: String, totalFrames: Int, converterProgress: ConverterProgress?, status: String): Boolean {
-        if(converterProgress == null) {
+    private fun convertToTarget(
+        sourcePath: String,
+        targetFile: File,
+        outputExtension: String,
+        converterProgress: ConverterProgress?,
+        commandBuilder: (File) -> String
+    ): Boolean = withWorkspace { workspace ->
+        val outputFile = workspace.resolve("output.$outputExtension")
+        val command = commandBuilder(outputFile)
+        Log.i(NAME, "ffmpeg $command")
+        val totalFrames = if (converterProgress == null) 0 else getTotalFrames(sourcePath)
+        if (!runFfmpeg(command, totalFrames, converterProgress, "Converting", outputFile)) {
+            return@withWorkspace false
+        }
+        publishCompletedFile(outputFile, targetFile, replace = false, lastModified = File(sourcePath).lastModified())
+    }
+
+    fun execFfmpegWithProgress(
+        ffmpegCommand: String,
+        totalFrames: Int,
+        converterProgress: ConverterProgress?,
+        status: String
+    ): Boolean {
+        if (converterProgress == null) {
             val session = FFmpegKit.execute(ffmpegCommand)
             return ReturnCode.isSuccess(session.returnCode)
-        } else {
-            val ffmpegCompletable = CompletableFuture<Boolean>()
-            val completeCallback = FFmpegSessionCompleteCallback{ session ->
-                converterProgress.accept(100.0f, status)
-                ffmpegCompletable.complete(ReturnCode.isSuccess(session.returnCode))
-            }
-            val statisticsCallback = StatisticsCallback { statistics ->
-                converterProgress.accept(statistics.videoFrameNumber / totalFrames.toFloat() * 100.0f, status)
-            }
-            FFmpegKit.executeAsync(ffmpegCommand, completeCallback, null, statisticsCallback)
-            return ffmpegCompletable.get()
         }
+
+        val ffmpegCompletable = CompletableFuture<Boolean>()
+        val completeCallback = FFmpegSessionCompleteCallback { session ->
+            val succeeded = ReturnCode.isSuccess(session.returnCode)
+            if (succeeded) {
+                converterProgress.accept(100.0f, status)
+            }
+            ffmpegCompletable.complete(succeeded)
+        }
+        val statisticsCallback = StatisticsCallback { statistics ->
+            if (totalFrames > 0) {
+                val progress = statistics.videoFrameNumber / totalFrames.toFloat() * 100.0f
+                converterProgress.accept(progress.coerceIn(0.0f, 99.0f), status)
+            }
+        }
+        FFmpegKit.executeAsync(ffmpegCommand, completeCallback, null, statisticsCallback)
+        return ffmpegCompletable.get()
     }
 
     fun getTotalFrames(filePath: String): Int {
-        var session: FFprobeSession = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
-        if(ReturnCode.isSuccess(session.returnCode)) {
-            if(session.logsAsString?.length != 0) {
-                try {
-                    return session.logsAsString.toFloat().toInt()
-                } catch (e: NumberFormatException) {
-                    return -1
-                }
+        val command = "-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 ${quote(filePath)}"
+        val session = FFprobeKit.execute(command)
+        if (!ReturnCode.isSuccess(session.returnCode)) {
+            return 0
+        }
+        return session.logsAsString?.trim()?.toIntOrNull() ?: 0
+    }
+
+    private fun runFfmpeg(
+        command: String,
+        totalFrames: Int,
+        converterProgress: ConverterProgress?,
+        status: String,
+        outputFile: File
+    ): Boolean = execFfmpegWithProgress(command, totalFrames, converterProgress, status) && outputFile.isValidOutput()
+
+    private inline fun <T> withWorkspace(block: (File) -> T): T {
+        check(converterCacheDir.mkdirs() || converterCacheDir.isDirectory) {
+            "Could not create converter cache directory"
+        }
+        val workspace = converterCacheDir.resolve("conversion-${UUID.randomUUID()}")
+        check(workspace.mkdirs()) { "Could not create conversion workspace" }
+        return try {
+            block(workspace)
+        } finally {
+            workspace.deleteRecursively()
+        }
+    }
+
+    private fun cacheResult(source: File): File {
+        val extension = source.extension
+        val target = converterCacheDir.resolve("shared-${UUID.randomUUID()}.$extension")
+        check(publishCompletedFile(source, target, replace = false, lastModified = source.lastModified())) {
+            "Could not save converted file for sharing"
+        }
+        return target
+    }
+
+    /** Stage beside the destination, then atomically replace it only after the copy is complete. */
+    private fun publishCompletedFile(
+        source: File,
+        target: File,
+        replace: Boolean,
+        lastModified: Long
+    ): Boolean {
+        val parent = target.parentFile ?: return false
+        if (!parent.mkdirs() && !parent.isDirectory) {
+            return false
+        }
+        if (!replace && target.exists()) {
+            return false
+        }
+
+        val stagingFile = parent.resolve(".${target.name}.pending-${UUID.randomUUID()}")
+        try {
+            source.copyTo(stagingFile, overwrite = false)
+            stagingFile.setLastModified(lastModified)
+            if (!replace && target.exists()) {
+                return false
+            }
+            moveCompletedFile(stagingFile, target, replace)
+            return true
+        } catch (_: FileAlreadyExistsException) {
+            return false
+        } finally {
+            stagingFile.delete()
+        }
+    }
+
+    private fun moveCompletedFile(source: File, target: File, replace: Boolean) {
+        try {
+            if (replace) {
+                Files.move(
+                    source.toPath(),
+                    target.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            } else {
+                Files.move(source.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            }
+        } catch (_: AtomicMoveNotSupportedException) {
+            if (replace) {
+                Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            } else {
+                Files.move(source.toPath(), target.toPath())
             }
         }
-        session = FFprobeKit.execute("-v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 \"$filePath\"")
-        try {
-            return session.logsAsString.toFloat().toInt()
-        } catch (e: NumberFormatException) {
-            return -1
+    }
+
+    private fun quote(value: String): String =
+        "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+    private fun escapeConcatPath(value: String): String =
+        value.replace("\\", "\\\\").replace("'", "'\\''")
+
+    private fun String.fileExtension(): String = substringAfterLast('.', "").lowercase()
+
+    private fun File.isValidOutput(): Boolean = isFile && length() > 0L
+
+    private fun File.sameFileAs(other: File): Boolean =
+        absoluteFile.toPath().normalize() == other.absoluteFile.toPath().normalize()
+
+    private fun deleteOriginalAfterReplacement(source: File, target: File): Boolean {
+        if (source.sameFileAs(target) || !source.exists() || source.delete()) {
+            return true
         }
+        Log.e(NAME, "Could not delete original file '${source.absolutePath}' after replacement")
+        return false
     }
 }
