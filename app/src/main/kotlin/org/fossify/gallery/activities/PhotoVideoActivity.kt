@@ -74,9 +74,8 @@ import org.fossify.gallery.helpers.TYPE_PORTRAITS
 import org.fossify.gallery.helpers.TYPE_RAWS
 import org.fossify.gallery.helpers.TYPE_SVGS
 import org.fossify.gallery.helpers.TYPE_VIDEOS
-import org.fossify.gallery.helpers.VIEWER_MEDIA
 import org.fossify.gallery.helpers.VIEWER_MEDIA_FROM_CURRENT_VIEW
-import org.fossify.gallery.helpers.ViewerMediaStore
+import org.fossify.gallery.helpers.VIEWER_MEDIA_SOURCE_PATH
 import org.fossify.gallery.models.Medium
 import java.io.File
 
@@ -314,12 +313,6 @@ open class PhotoVideoActivity : BaseViewerActivity(), ViewPagerFragment.Fragment
     }
 
     private fun openViewPager(path: String) {
-        val visibleMedia = if (intent.getBooleanExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, false)) {
-            ViewerMediaStore.take(path)
-        } else {
-            null
-        }
-
         if (!intent.getBooleanExtra(IS_FROM_GALLERY, false)) {
             MediaActivity.mMedia.clear()
         }
@@ -331,7 +324,10 @@ open class PhotoVideoActivity : BaseViewerActivity(), ViewPagerFragment.Fragment
                 putExtra(IS_VIEW_INTENT, true)
                 putExtra(IS_FROM_GALLERY, mIsFromGallery)
                 putExtra(PATH, path)
-                visibleMedia?.let { putExtra(VIEWER_MEDIA, it) }
+                if (intent.getBooleanExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, false)) {
+                    putExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, true)
+                    putExtra(VIEWER_MEDIA_SOURCE_PATH, intent.getStringExtra(REAL_FILE_PATH) ?: path)
+                }
                 startActivity(this)
             }
         }

@@ -21,9 +21,14 @@ object ViewerMediaStore {
     }
 
     @Synchronized
-    fun take(path: String): ArrayList<Medium>? {
+    fun get(path: String): ArrayList<Medium>? {
         removeExpiredLists()
-        return pendingMedia.remove(path)?.items
+        return pendingMedia[path]?.items?.let(::ArrayList)
+    }
+
+    @Synchronized
+    fun remove(path: String) {
+        pendingMedia.remove(path)
     }
 
     private fun removeExpiredLists() {

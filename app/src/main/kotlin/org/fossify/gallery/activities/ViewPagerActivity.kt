@@ -168,7 +168,9 @@ import org.fossify.gallery.helpers.SHOW_NEXT_ITEM
 import org.fossify.gallery.helpers.SHOW_PREV_ITEM
 import org.fossify.gallery.helpers.SHOW_RECYCLE_BIN
 import org.fossify.gallery.helpers.SKIP_AUTHENTICATION
-import org.fossify.gallery.helpers.VIEWER_MEDIA
+import org.fossify.gallery.helpers.VIEWER_MEDIA_FROM_CURRENT_VIEW
+import org.fossify.gallery.helpers.VIEWER_MEDIA_SOURCE_PATH
+import org.fossify.gallery.helpers.ViewerMediaStore
 import org.fossify.gallery.helpers.SLIDESHOW_ANIMATION_FADE
 import org.fossify.gallery.helpers.SLIDESHOW_ANIMATION_NONE
 import org.fossify.gallery.helpers.SLIDESHOW_ANIMATION_SLIDE
@@ -201,6 +203,8 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
     private var mPos = -1
     private var mShowAll = false
     private var mUsesProvidedMedia = false
+    private var mIsPortraitViewerRedirect = false
+    private var mProvidedMediaPath = ""
     private var mIsSlideshowActive = false
     private var mPrevHashcode = 0
 
@@ -237,12 +241,7 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
         refreshMenuItems()
 
         window.decorView.setBackgroundColor(getProperBackgroundColor())
-        val providedMedia = (intent.getSerializableExtra(VIEWER_MEDIA) as? ArrayList<*>)
-            ?.filterIsInstance<Medium>()
-        if (!providedMedia.isNullOrEmpty()) {
-            mMediaFiles.addAll(providedMedia)
-            mUsesProvidedMedia = true
-        } else {
+        if (!intent.getBooleanExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, false)) {
             (MediaActivity.mMedia.clone() as ArrayList<ThumbnailItem>).filterIsInstanceTo(mMediaFiles, Medium::class.java)
         }
 
@@ -279,6 +278,10 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
     override fun onDestroy() {
         super.onDestroy()
         ColorModeHelper.resetColorMode(this)
+
+        if (isFinishing && !mIsPortraitViewerRedirect && mProvidedMediaPath.isNotEmpty()) {
+            ViewerMediaStore.remove(mProvidedMediaPath)
+        }
 
         if (intent.extras?.containsKey(IS_VIEW_INTENT) == true) {
             config.temporarilyShowHidden = false
@@ -458,6 +461,17 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
             mPath = intent.extras!!.getString(REAL_FILE_PATH)!!
         }
 
+        mProvidedMediaPath = intent.getStringExtra(VIEWER_MEDIA_SOURCE_PATH).orEmpty().ifEmpty { mPath }
+        if (intent.getBooleanExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, false)) {
+            val providedMedia = ViewerMediaStore.get(mProvidedMediaPath)
+            if (!providedMedia.isNullOrEmpty()) {
+                mMediaFiles.addAll(providedMedia)
+                mUsesProvidedMedia = true
+            } else if (mMediaFiles.isEmpty()) {
+                (MediaActivity.mMedia.clone() as ArrayList<ThumbnailItem>).filterIsInstanceTo(mMediaFiles, Medium::class.java)
+            }
+        }
+
         if (mPath.isEmpty()) {
             toast(org.fossify.commons.R.string.unknown_error_occurred)
             finish()
@@ -470,6 +484,7 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
             newIntent.putExtra(PORTRAIT_PATH, mPath)
             newIntent.putExtra(PATH, "${mPath.getParentPath().getParentPath()}/${mPath.getFilenameFromPath()}")
 
+            mIsPortraitViewerRedirect = true
             startActivity(newIntent)
             finish()
             return

@@ -23,7 +23,9 @@ import org.fossify.gallery.helpers.PATH
 import org.fossify.gallery.helpers.SHOW_ALL
 import org.fossify.gallery.helpers.VIDEO_PLAYER_APP
 import org.fossify.gallery.helpers.VIDEO_PLAYER_SYSTEM
-import org.fossify.gallery.helpers.VIEWER_MEDIA
+import org.fossify.gallery.helpers.VIEWER_MEDIA_FROM_CURRENT_VIEW
+import org.fossify.gallery.helpers.VIEWER_MEDIA_SOURCE_PATH
+import org.fossify.gallery.helpers.ViewerMediaStore
 import org.fossify.gallery.extensions.openPathWithViewerMedia
 import org.fossify.gallery.interfaces.MediaOperationsListener
 import org.fossify.gallery.models.Medium
@@ -188,7 +190,9 @@ class SearchActivity : SimpleActivity(), MediaOperationsListener {
             putExtra(PATH, path)
             putExtra(SHOW_ALL, false)
             val visibleMedia = ArrayList(getMediaAdapter()?.media?.filterIsInstance<Medium>().orEmpty())
-            putExtra(VIEWER_MEDIA, visibleMedia)
+            ViewerMediaStore.store(path, visibleMedia)
+            putExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, true)
+            putExtra(VIEWER_MEDIA_SOURCE_PATH, path)
             startActivity(this)
         }
     }

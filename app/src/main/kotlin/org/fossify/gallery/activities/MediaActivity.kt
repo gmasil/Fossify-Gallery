@@ -109,7 +109,9 @@ import org.fossify.gallery.helpers.SKIP_AUTHENTICATION
 import org.fossify.gallery.helpers.SLIDESHOW_START_ON_ENTER
 import org.fossify.gallery.helpers.VIDEO_PLAYER_APP
 import org.fossify.gallery.helpers.VIDEO_PLAYER_SYSTEM
-import org.fossify.gallery.helpers.VIEWER_MEDIA
+import org.fossify.gallery.helpers.VIEWER_MEDIA_FROM_CURRENT_VIEW
+import org.fossify.gallery.helpers.VIEWER_MEDIA_SOURCE_PATH
+import org.fossify.gallery.helpers.ViewerMediaStore
 import org.fossify.gallery.interfaces.MediaOperationsListener
 import org.fossify.gallery.models.Medium
 import org.fossify.gallery.models.ThumbnailItem
@@ -1014,7 +1016,9 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
             putExtra(SHOW_FAVORITES, mPath == FAVORITES)
             putExtra(SHOW_RECYCLE_BIN, mPath == RECYCLE_BIN)
             putExtra(IS_FROM_GALLERY, true)
-            putExtra(VIEWER_MEDIA, visibleMedia)
+            ViewerMediaStore.store(path, visibleMedia)
+            putExtra(VIEWER_MEDIA_FROM_CURRENT_VIEW, true)
+            putExtra(VIEWER_MEDIA_SOURCE_PATH, path)
             startActivity(this)
         }
     }
