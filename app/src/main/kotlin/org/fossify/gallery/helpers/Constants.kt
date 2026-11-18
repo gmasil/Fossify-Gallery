@@ -152,6 +152,7 @@ const val EXOPLAYER_MAX_BUFFER_MS = 8000
 const val DIRECTORY = "directory"
 const val DUPLICATE_SCAN_FOLDERS = "duplicate_scan_folders"
 const val DUPLICATE_SHOW_FOLDER_NAMES = "duplicate_show_folder_names"
+const val FIND_SIMILAR_FILES = "find_similar_files"
 const val MEDIUM = "medium"
 const val PATH = "path"
 const val VIEWER_MEDIA = "viewer_media"

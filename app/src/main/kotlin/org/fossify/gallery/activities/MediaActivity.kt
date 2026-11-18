@@ -89,6 +89,7 @@ import org.fossify.gallery.extensions.updateWidgets
 import org.fossify.gallery.helpers.DIRECTORY
 import org.fossify.gallery.helpers.DUPLICATE_SHOW_FOLDER_NAMES
 import org.fossify.gallery.helpers.DUPLICATE_SCAN_FOLDERS
+import org.fossify.gallery.helpers.FIND_SIMILAR_FILES
 import org.fossify.gallery.helpers.GET_ANY_INTENT
 import org.fossify.gallery.helpers.GET_IMAGE_INTENT
 import org.fossify.gallery.helpers.GET_VIDEO_INTENT
@@ -344,6 +345,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
 
             findItem(R.id.folder_view).isVisible = mShowAll
             findItem(R.id.find_duplicates).isVisible = !mShowAll && mPath != RECYCLE_BIN && mPath != FAVORITES
+            findItem(R.id.find_similar_files).isVisible = !mShowAll && mPath != RECYCLE_BIN && mPath != FAVORITES
             findItem(R.id.open_camera).isVisible = mShowAll
             findItem(R.id.about).isVisible = mShowAll
             findItem(R.id.create_new_folder).isVisible =
@@ -379,6 +381,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
                 R.id.sort -> showSortingDialog()
                 R.id.filter -> showFilterMediaDialog()
                 R.id.find_duplicates -> showDuplicateFilesDialog()
+                R.id.find_similar_files -> showSimilarFiles()
                 R.id.empty_recycle_bin -> emptyRecycleBin()
                 R.id.empty_disable_recycle_bin -> emptyAndDisableRecycleBin()
                 R.id.restore_all_files -> restoreAllFiles()
@@ -591,6 +594,15 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
         Intent(this, DuplicateFilesActivity::class.java).apply {
             putStringArrayListExtra(DUPLICATE_SCAN_FOLDERS, arrayListOf(mPath))
             putExtra(DUPLICATE_SHOW_FOLDER_NAMES, false)
+            startActivity(this)
+        }
+    }
+
+    private fun showSimilarFiles() {
+        Intent(this, DuplicateFilesActivity::class.java).apply {
+            putStringArrayListExtra(DUPLICATE_SCAN_FOLDERS, arrayListOf(mPath))
+            putExtra(DUPLICATE_SHOW_FOLDER_NAMES, false)
+            putExtra(FIND_SIMILAR_FILES, true)
             startActivity(this)
         }
     }

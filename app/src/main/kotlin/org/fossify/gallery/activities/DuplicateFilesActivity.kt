@@ -32,8 +32,10 @@ import org.fossify.gallery.extensions.openPathWithViewerMedia
 import org.fossify.gallery.helpers.DUPLICATE_SCAN_FOLDERS
 import org.fossify.gallery.helpers.DUPLICATE_SHOW_FOLDER_NAMES
 import org.fossify.gallery.helpers.DuplicateFileFinder
+import org.fossify.gallery.helpers.FIND_SIMILAR_FILES
 import org.fossify.gallery.helpers.GridSpacingItemDecoration
 import org.fossify.gallery.helpers.PATH
+import org.fossify.gallery.helpers.SimilarImageFinder
 import org.fossify.gallery.helpers.SHOW_ALL
 import org.fossify.gallery.helpers.TYPE_GIFS
 import org.fossify.gallery.helpers.TYPE_RAWS
@@ -52,11 +54,14 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
     private val binding by viewBinding(ActivityDuplicateFilesBinding::inflate)
     private val shouldStop = AtomicBoolean(false)
     private var scanStarted = false
+    private val isSimilarFiles get() = intent.getBooleanExtra(FIND_SIMILAR_FILES, false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-        binding.duplicateFilesToolbar.title = getString(R.string.duplicate_files)
+        val title = if (isSimilarFiles) R.string.similar_files else R.string.duplicate_files
+        setTitle(title)
+        binding.duplicateFilesToolbar.title = getString(title)
         binding.duplicateFilesPlaceholder.setTextColor(getProperTextColor())
         binding.duplicateFilesProgress.setIndicatorColor(getProperPrimaryColor())
         setupEdgeToEdge(
@@ -81,11 +86,18 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
         scanStarted = true
         val folders = savedInstanceState?.getStringArrayList(DUPLICATE_SCAN_FOLDERS)
             ?: intent.getStringArrayListExtra(DUPLICATE_SCAN_FOLDERS).orEmpty()
+        val isSimilar = isSimilarFiles
+        binding.duplicateFilesScanningText.setText(
+            if (isSimilar) R.string.scanning_for_similar_images else R.string.scanning_for_duplicates
+        )
 
         ensureBackgroundThread {
-            val duplicateFiles = DuplicateFileFinder(applicationContext)
-                .findDuplicates(folders) { shouldStop.get() }
-            val media = duplicateFiles.flatten().mapNotNull(::fileToMedium) as ArrayList<Medium>
+            val matchedFiles = if (isSimilar) {
+                SimilarImageFinder(applicationContext).findSimilarImages(folders) { shouldStop.get() }
+            } else {
+                DuplicateFileFinder(applicationContext).findDuplicates(folders) { shouldStop.get() }
+            }
+            val media = matchedFiles.flatten().mapNotNull(::fileToMedium) as ArrayList<Medium>
             val thumbnailItems = ArrayList<ThumbnailItem>(media)
             val showFolderNames = intent.getBooleanExtra(DUPLICATE_SHOW_FOLDER_NAMES, false)
 
@@ -95,9 +107,12 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
                 binding.duplicateFilesScanningText.beGone()
                 binding.duplicateFilesPlaceholder.apply {
                     text = if (media.isEmpty()) {
-                        getString(R.string.no_duplicate_files_found)
+                        getString(if (isSimilar) R.string.no_similar_files_found else R.string.no_duplicate_files_found)
                     } else {
-                        getString(R.string.duplicate_files_count, media.size)
+                        getString(
+                            if (isSimilar) R.string.similar_files_count else R.string.duplicate_files_count,
+                            media.size
+                        )
                     }
                     beVisibleIf(media.isEmpty())
                 }
@@ -179,7 +194,9 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
             val isEmpty = (binding.duplicateFilesGrid.adapter?.itemCount ?: 0) == 0
             if (isEmpty) {
                 binding.duplicateFilesGrid.beGone()
-                binding.duplicateFilesPlaceholder.setText(R.string.no_duplicate_files_found)
+                binding.duplicateFilesPlaceholder.setText(
+                    if (isSimilarFiles) R.string.no_similar_files_found else R.string.no_duplicate_files_found
+                )
                 binding.duplicateFilesPlaceholder.beVisible()
             }
         }
