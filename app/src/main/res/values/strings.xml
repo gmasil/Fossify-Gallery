@@ -56,6 +56,7 @@
     <string name="scanning_for_similar_images">Scanning for similar images…</string>
     <string name="no_similar_files_found">No similar images found.</string>
     <string name="similar_files_count">Found %1$d similar images</string>
+    <string name="scan_files_progress">Checked %1$d of %2$d files</string>
     <plurals name="duplicate_group">
         <item quantity="one">Found %1$d duplicate group:</item>
         <item quantity="other">Found %1$d duplicate groups:</item>

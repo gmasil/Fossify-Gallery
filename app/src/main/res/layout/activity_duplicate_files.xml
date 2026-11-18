@@ -50,11 +50,12 @@
             android:text="@string/scanning_for_duplicates"
             android:textSize="@dimen/bigger_text_size" />
 
-        <com.google.android.material.progressindicator.CircularProgressIndicator
+        <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/duplicate_files_progress"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_marginHorizontal="32dp"
             android:layout_marginBottom="48dp"
             android:indeterminate="true"
             app:hideAnimationBehavior="inward"

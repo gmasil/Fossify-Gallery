@@ -12,6 +12,7 @@ import java.security.MessageDigest
 class DuplicateFileFinder(private val context: Context) {
     fun findDuplicates(
         folders: Collection<String>,
+        onProgress: (checked: Int, total: Int) -> Unit = { _, _ -> },
         shouldStop: () -> Boolean = { false }
     ): List<List<File>> {
         val fetcher = MediaFetcher(context)
@@ -49,6 +50,19 @@ class DuplicateFileFinder(private val context: Context) {
                 null
             }
         }.groupBy { it.length() }.values.filter { it.size > 1 }
+        val totalFiles = filePaths.size
+        var checkedFiles = totalFiles - sameSizeCandidates.sumOf { it.size }
+        var lastReportedCount = -1
+        val progressInterval = (totalFiles / MAX_PROGRESS_UPDATES).coerceAtLeast(1)
+
+        fun reportProgress(force: Boolean = false) {
+            if (force || checkedFiles - lastReportedCount >= progressInterval || checkedFiles >= totalFiles) {
+                onProgress(checkedFiles, totalFiles)
+                lastReportedCount = checkedFiles
+            }
+        }
+
+        reportProgress(force = true)
 
         val duplicates = ArrayList<List<File>>()
         sameSizeCandidates.forEach { candidates ->
@@ -62,6 +76,8 @@ class DuplicateFileFinder(private val context: Context) {
                     byHash.getOrPut(hash) { ArrayList() }.add(file)
                 } catch (_: Exception) {
                 }
+                checkedFiles++
+                reportProgress()
             }
 
             byHash.values.filter { it.size > 1 }.forEach { hashMatches ->
@@ -132,6 +148,7 @@ class DuplicateFileFinder(private val context: Context) {
 
     companion object {
         private const val BUFFER_SIZE = 64 * 1024
+        private const val MAX_PROGRESS_UPDATES = 100
         private const val HEX_DIGITS = "0123456789abcdef"
     }
 }

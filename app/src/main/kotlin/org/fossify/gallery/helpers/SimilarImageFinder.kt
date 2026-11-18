@@ -23,6 +23,7 @@ import kotlin.math.sqrt
 class SimilarImageFinder(private val context: Context) {
     fun findSimilarImages(
         folders: Collection<String>,
+        onProgress: (checked: Int, total: Int) -> Unit = { _, _ -> },
         shouldStop: () -> Boolean = { false }
     ): List<List<File>> {
         val fetcher = MediaFetcher(context)
@@ -61,6 +62,20 @@ class SimilarImageFinder(private val context: Context) {
                 null
             }
         }
+        val totalFiles = filePaths.size
+        var checkedFiles = totalFiles - candidates.size
+        var lastReportedCount = -1
+        val progressInterval = (totalFiles / MAX_PROGRESS_UPDATES).coerceAtLeast(1)
+
+        fun reportProgress(force: Boolean = false) {
+            if (force || checkedFiles - lastReportedCount >= progressInterval || checkedFiles >= totalFiles) {
+                onProgress(checkedFiles, totalFiles)
+                lastReportedCount = checkedFiles
+            }
+        }
+
+        reportProgress(force = true)
+
         val fingerprints = ArrayList<ImageFingerprint>()
         val hashIndex = PerceptualHashIndex()
         val exactCandidates = HashMap<ExactKey, MutableList<Int>>()
@@ -86,40 +101,45 @@ class SimilarImageFinder(private val context: Context) {
 
         candidates.forEach candidateLoop@{ file ->
             if (shouldStop()) return emptyList()
-            val fingerprint = try {
-                file.createFingerprint()
-            } catch (_: Exception) {
-                null
-            } ?: return@candidateLoop
-
-            // Exact copies belong in the existing duplicate scan, not this similarity result.
-            val exactKey = ExactKey(fingerprint.hash, file.length())
-            val existingExactCandidates = exactCandidates[exactKey].orEmpty()
-            val isExactCopy = existingExactCandidates.any { index ->
-                if (shouldStop()) return emptyList()
-                try {
-                    file.contentsMatch(fingerprints[index].file, shouldStop)
+            try {
+                val fingerprint = try {
+                    file.createFingerprint()
                 } catch (_: Exception) {
-                    false
-                }
-            }
-            if (isExactCopy) return@candidateLoop
+                    null
+                } ?: return@candidateLoop
 
-            val index = fingerprints.size
-            parents.add(index)
-            val nearbyCandidates = hashIndex.findWithin(fingerprint.hash, MAX_PHASH_DISTANCE)
-            nearbyCandidates.forEach nearbyLoop@{ nearbyIndex ->
-                if (shouldStop()) return emptyList()
-                val other = fingerprints[nearbyIndex]
-                if (!aspectRatiosMatch(fingerprint.aspectRatio, other.aspectRatio)) return@nearbyLoop
-                if (structuralSimilarity(fingerprint.pixels, other.pixels) >= MIN_SSIM) {
-                    join(index, nearbyIndex)
+                // Exact copies belong in the existing duplicate scan, not this similarity result.
+                val exactKey = ExactKey(fingerprint.hash, file.length())
+                val existingExactCandidates = exactCandidates[exactKey].orEmpty()
+                val isExactCopy = existingExactCandidates.any { index ->
+                    if (shouldStop()) return emptyList()
+                    try {
+                        file.contentsMatch(fingerprints[index].file, shouldStop)
+                    } catch (_: Exception) {
+                        false
+                    }
                 }
-            }
+                if (isExactCopy) return@candidateLoop
 
-            fingerprints.add(fingerprint)
-            hashIndex.add(fingerprint.hash, index)
-            exactCandidates.getOrPut(exactKey) { ArrayList() }.add(index)
+                val index = fingerprints.size
+                parents.add(index)
+                val nearbyCandidates = hashIndex.findWithin(fingerprint.hash, MAX_PHASH_DISTANCE)
+                nearbyCandidates.forEach nearbyLoop@{ nearbyIndex ->
+                    if (shouldStop()) return emptyList()
+                    val other = fingerprints[nearbyIndex]
+                    if (!aspectRatiosMatch(fingerprint.aspectRatio, other.aspectRatio)) return@nearbyLoop
+                    if (structuralSimilarity(fingerprint.pixels, other.pixels) >= MIN_SSIM) {
+                        join(index, nearbyIndex)
+                    }
+                }
+
+                fingerprints.add(fingerprint)
+                hashIndex.add(fingerprint.hash, index)
+                exactCandidates.getOrPut(exactKey) { ArrayList() }.add(index)
+            } finally {
+                checkedFiles++
+                reportProgress()
+            }
         }
 
         if (shouldStop()) return emptyList()
@@ -411,6 +431,7 @@ class SimilarImageFinder(private val context: Context) {
         private const val SSIM_C1 = 6.5025
         private const val SSIM_C2 = 58.5225
         private const val MIN_LUMINANCE_VARIANCE = 16.0
+        private const val MAX_PROGRESS_UPDATES = 100
         private val COSINE_MATRIX = Array(HASH_SIZE) { position ->
             DoubleArray(DCT_SIZE) { frequency ->
                 val scale = if (frequency == 0) sqrt(1.0 / HASH_SIZE) else sqrt(2.0 / HASH_SIZE)

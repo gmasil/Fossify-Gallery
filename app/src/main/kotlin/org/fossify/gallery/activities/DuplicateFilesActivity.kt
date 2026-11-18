@@ -2,6 +2,7 @@ package org.fossify.gallery.activities
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.GridLayoutManager
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beVisible
@@ -50,6 +51,8 @@ import org.fossify.gallery.models.ThumbnailItem
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
+private const val PROGRESS_TRACK_ALPHA = 64
+
 class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
     private val binding by viewBinding(ActivityDuplicateFilesBinding::inflate)
     private val shouldStop = AtomicBoolean(false)
@@ -63,7 +66,12 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
         setTitle(title)
         binding.duplicateFilesToolbar.title = getString(title)
         binding.duplicateFilesPlaceholder.setTextColor(getProperTextColor())
-        binding.duplicateFilesProgress.setIndicatorColor(getProperPrimaryColor())
+        val primaryColor = getProperPrimaryColor()
+        val trackColor = ColorUtils.setAlphaComponent(getProperTextColor(), PROGRESS_TRACK_ALPHA)
+        binding.duplicateFilesProgress.apply {
+            setIndicatorColor(primaryColor)
+            setTrackColor(trackColor)
+        }
         setupEdgeToEdge(
             padTopSystem = listOf(binding.duplicateFilesAppbar),
             padBottomSystem = listOf(binding.duplicateFilesGrid)
@@ -93,9 +101,15 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
 
         ensureBackgroundThread {
             val matchedFiles = if (isSimilar) {
-                SimilarImageFinder(applicationContext).findSimilarImages(folders) { shouldStop.get() }
+                SimilarImageFinder(applicationContext).findSimilarImages(
+                    folders,
+                    onProgress = ::updateScanProgress
+                ) { shouldStop.get() }
             } else {
-                DuplicateFileFinder(applicationContext).findDuplicates(folders) { shouldStop.get() }
+                DuplicateFileFinder(applicationContext).findDuplicates(
+                    folders,
+                    onProgress = ::updateScanProgress
+                ) { shouldStop.get() }
             }
             val media = matchedFiles.flatten().mapNotNull(::fileToMedium) as ArrayList<Medium>
             val thumbnailItems = ArrayList<ThumbnailItem>(media)
@@ -120,6 +134,21 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
                     showDuplicates(thumbnailItems, showFolderNames)
                 }
             }
+        }
+    }
+
+    private fun updateScanProgress(checked: Int, total: Int) {
+        runOnUiThread {
+            if (isFinishing || isDestroyed || shouldStop.get()) return@runOnUiThread
+            val progressMax = total.coerceAtLeast(1)
+            binding.duplicateFilesProgress.apply {
+                if (isIndeterminate) {
+                    isIndeterminate = false
+                }
+                max = progressMax
+                setProgressCompat(checked.coerceIn(0, progressMax), false)
+            }
+            binding.duplicateFilesScanningText.text = getString(R.string.scan_files_progress, checked, total)
         }
     }
 
