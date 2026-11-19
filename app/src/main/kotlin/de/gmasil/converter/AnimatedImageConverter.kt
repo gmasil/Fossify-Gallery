@@ -32,6 +32,11 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         const val NAME = "AnimatedImageConverter"
         private const val STILL_IMAGE_VIDEO_DURATION_SECONDS = 3
         private const val VIDEO_FRAME_RATE = 30
+        private const val VIDEO_OUTPUT_HEIGHT = 720
+        private const val VIDEO_OUTPUT_BITRATE = 1_500_000L
+        private const val AUDIO_OUTPUT_BITRATE = 128_000L
+        // Account for container overhead and encoder bitrate variance.
+        private const val VIDEO_OUTPUT_SIZE_MARGIN = 1.05
     }
 
     private val converterCacheDir: File
@@ -87,9 +92,28 @@ class AnimatedImageConverter(private val applicationContext: Context) {
 
         val lastModified = sourceFile.lastModified()
         val sourceSize = sourceFile.length()
+        val videoInfo = getVideoStreamInfo(filePath)
+        if (videoInfo != null) {
+            val estimatedOutputSize = estimateReducedVideoSize(videoInfo)
+            Log.i(
+                NAME,
+                "Video preflight: ${videoInfo.width}x${videoInfo.height}, " +
+                    "bitrate=${videoInfo.bitrate ?: "unknown"}, duration=${videoInfo.durationSeconds}s, " +
+                    "source=$sourceSize, estimated output=$estimatedOutputSize"
+            )
+            if (sourceSize <= estimatedOutputSize) {
+                Log.i(NAME, "Skipping video reduction because estimated output is not smaller")
+                return false
+            }
+        }
+
         val reduced = withWorkspace { workspace ->
             val outputFile = workspace.resolve("output.mp4")
-            val command = "-i ${quote(filePath)} -vf \"scale=-2:720\" -c:v h264_mediacodec -b:v 1.5M -c:a aac ${quote(outputFile.absolutePath)}"
+            val scaleFilter = "scale=iw:'min($VIDEO_OUTPUT_HEIGHT,ih)':" +
+                "force_original_aspect_ratio=decrease:force_divisible_by=2"
+            val command = "-i ${quote(filePath)} -vf \"$scaleFilter\" " +
+                "-c:v h264_mediacodec -b:v ${VIDEO_OUTPUT_BITRATE / 1000}k " +
+                "-c:a aac -b:a ${AUDIO_OUTPUT_BITRATE / 1000}k ${quote(outputFile.absolutePath)}"
             Log.i(NAME, "ffmpeg $command")
             val totalFrames = if (converterProgress == null) 0 else getTotalFrames(filePath)
             if (!runFfmpeg(command, totalFrames, converterProgress, "Converting", outputFile)) {
@@ -103,6 +127,55 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         }
 
         return reduced && (!replace || deleteOriginalAfterReplacement(sourceFile, targetFile))
+    }
+
+    private data class VideoStreamInfo(
+        val width: Long,
+        val height: Long,
+        val durationSeconds: Double,
+        val bitrate: Long?,
+        val hasAudio: Boolean
+    )
+
+    private fun getVideoStreamInfo(filePath: String): VideoStreamInfo? {
+        return try {
+            val session = FFprobeKit.getMediaInformation(filePath)
+            if (!ReturnCode.isSuccess(session.returnCode)) {
+                return null
+            }
+
+            val mediaInformation = session.mediaInformation ?: return null
+            val streams = mediaInformation.streams
+            val videoStream = streams
+                .filter { it.type == "video" }
+                .maxByOrNull { (it.width ?: 0L) * (it.height ?: 0L) }
+                ?: return null
+            val durationSeconds = sequenceOf(
+                mediaInformation.duration,
+                *streams.map { it.getStringProperty("duration") }.toTypedArray()
+            )
+                .mapNotNull { it?.toDoubleOrNull() }
+                .filter { it.isFinite() && it > 0.0 }
+                .maxOrNull()
+                ?: return null
+
+            VideoStreamInfo(
+                width = videoStream.width ?: 0L,
+                height = videoStream.height ?: 0L,
+                durationSeconds = durationSeconds,
+                bitrate = videoStream.bitrate?.toLongOrNull(),
+                hasAudio = streams.any { it.type == "audio" }
+            )
+        } catch (exception: Exception) {
+            Log.w(NAME, "Could not probe video stream for size estimation", exception)
+            null
+        }
+    }
+
+    private fun estimateReducedVideoSize(videoInfo: VideoStreamInfo): Long {
+        val outputBitrate = VIDEO_OUTPUT_BITRATE + if (videoInfo.hasAudio) AUDIO_OUTPUT_BITRATE else 0L
+        val estimatedBytes = videoInfo.durationSeconds * outputBitrate / 8.0 * VIDEO_OUTPUT_SIZE_MARGIN
+        return estimatedBytes.toLong()
     }
 
     fun reduceStillImageSize(filePath: String, replace: Boolean): Boolean {
