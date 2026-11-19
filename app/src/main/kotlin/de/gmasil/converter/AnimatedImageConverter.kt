@@ -33,7 +33,7 @@ class AnimatedImageConverter(private val applicationContext: Context) {
         private const val STILL_IMAGE_VIDEO_DURATION_SECONDS = 3
         private const val VIDEO_FRAME_RATE = 30
         private const val VIDEO_OUTPUT_HEIGHT = 720
-        private const val VIDEO_OUTPUT_BITRATE = 1_500_000L
+        private const val VIDEO_OUTPUT_BITRATE = 2_000_000L
         private const val AUDIO_OUTPUT_BITRATE = 128_000L
         // Account for container overhead and encoder bitrate variance.
         private const val VIDEO_OUTPUT_SIZE_MARGIN = 1.05

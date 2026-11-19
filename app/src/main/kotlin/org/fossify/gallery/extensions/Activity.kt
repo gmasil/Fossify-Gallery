@@ -141,25 +141,38 @@ fun Activity.openEditor(path: String, forceChooser: Boolean = false) {
 fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
     val converter = AnimatedImageConverter(this)
     val converterProgress = createConverterProgressNotification(applicationContext, "Converting file", false)
+    val targetExtension = targetType.lowercase()
+    val filesToConvert = mediaList.filter { medium ->
+        val path = medium.path.lowercase()
+        when (targetExtension) {
+            "mp4" -> path.endsWith(".webp") || path.endsWith(".gif") || path.endsWith(".webm")
+            "webp" -> !path.endsWith(".webp")
+            "gif" -> path.endsWith(".webp") || path.endsWith(".mp4")
+            else -> false
+        }
+    }
+
     ensureBackgroundThread {
-        for (medium in mediaList) {
-            if(medium.path.lowercase().endsWith(".${targetType.lowercase()}")) {
-                // do not convert to the same type, no conversion needed
-                continue
+        filesToConvert.forEachIndexed { index, medium ->
+            val fileProgress = ConverterProgress { progressPercent, status ->
+                converterProgress.accept(
+                    progressPercent,
+                    "$status file ${index + 1}/${filesToConvert.size}, current file"
+                )
             }
-            if (targetType.lowercase() == "mp4") {
-                if(medium.path.lowercase().endsWith(".webp")) {
-                    converter.convertAnimatedImageToVideoInSameFolder(medium.path, converterProgress)
-                } else if(medium.path.lowercase().endsWith(".gif") || medium.path.lowercase().endsWith(".webm")) {
-                    converter.convertToVideoInSameFolder(medium.path, converterProgress)
+            if (targetExtension == "mp4") {
+                if (medium.path.lowercase().endsWith(".webp")) {
+                    converter.convertAnimatedImageToVideoInSameFolder(medium.path, fileProgress)
+                } else {
+                    converter.convertToVideoInSameFolder(medium.path, fileProgress)
                 }
-            } else if(targetType.lowercase() == "webp") {
-                converter.convertToWebpInSameFolder(medium.path, converterProgress)
-            } else if(targetType.lowercase() == "gif") {
-                if(medium.path.lowercase().endsWith(".webp")) {
-                    converter.convertAnimatedImageToGifInSameFolder(medium.path, converterProgress)
-                } else if(medium.path.lowercase().endsWith(".mp4")) {
-                    converter.convertVideoToGifInSameFolder(medium.path, converterProgress)
+            } else if (targetExtension == "webp") {
+                converter.convertToWebpInSameFolder(medium.path, fileProgress)
+            } else if (targetExtension == "gif") {
+                if (medium.path.lowercase().endsWith(".webp")) {
+                    converter.convertAnimatedImageToGifInSameFolder(medium.path, fileProgress)
+                } else {
+                    converter.convertVideoToGifInSameFolder(medium.path, fileProgress)
                 }
             }
         }
@@ -171,15 +184,20 @@ fun Activity.reduceMediaSize(mediaList: List<Medium>, replace: Boolean) {
     val converter = AnimatedImageConverter(this)
     val converterProgress = createConverterProgressNotification(applicationContext, "Reducing file size", false)
     ensureBackgroundThread {
-        var i = 0
         var reduced = 0
+        var skipped = 0
         for (medium in mediaList) {
-            if(converter.reduceFileSize(medium.path, replace, converterProgress)){
+            if (converter.reduceFileSize(medium.path, replace, converterProgress)) {
                 reduced++
+            } else {
+                skipped++
             }
-            i++
         }
-        // TODO: set progress to final report
+        showConverterSummaryNotification(
+            applicationContext,
+            "Reducing file size",
+            "Done: reduced $reduced files, skipped $skipped files."
+        )
     }
 }
 
@@ -225,6 +243,19 @@ fun createConverterProgressNotification(ctx: Context, title: String, closeAtEnd:
             }
         }
     }
+}
+
+private fun showConverterSummaryNotification(ctx: Context, title: String, summary: String) {
+    val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notification = Notification.Builder(ctx, "GALLERY_CONVERT_CHANNEL")
+        .setSmallIcon(R.drawable.ic_launcher_foreground)
+        .setContentTitle(title)
+        .setContentText(summary)
+        .setProgress(0, 0, false)
+        .setOngoing(false)
+        .setAutoCancel(true)
+        .build()
+    notificationManager.notify(100, notification)
 }
 
 fun Activity.launchCamera() {
