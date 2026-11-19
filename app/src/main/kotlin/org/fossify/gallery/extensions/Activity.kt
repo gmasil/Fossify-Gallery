@@ -65,9 +65,24 @@ import de.gmasil.converter.api.ConverterProgress
 fun Activity.sharePath(path: String) {
     val progress = createConverterProgressNotification(applicationContext, "Converting file to share", true)
     ensureBackgroundThread {
+        val fileProgress = progress.forFile(1, 1)
+        fileProgress.accept(0f, "Converting")
         try {
-            sharePathIntent(AnimatedImageConverter(this).handleMediaForSharing(path, progress).absolutePath, BuildConfig.APPLICATION_ID)
+            val sharableFile = AnimatedImageConverter(this).handleMediaForSharing(path, fileProgress)
+            fileProgress.accept(100f, "Converting")
+            showConverterSummaryNotification(
+                applicationContext,
+                "Converting file to share",
+                "Done: file prepared for sharing."
+            )
+            sharePathIntent(sharableFile.absolutePath, BuildConfig.APPLICATION_ID)
         } catch (e: Exception) {
+            fileProgress.accept(100f, "Converting")
+            showConverterSummaryNotification(
+                applicationContext,
+                "Converting file to share",
+                "Conversion failed; sharing the original file."
+            )
             toast("${e.message}, sharing original...")
             e.printStackTrace()
             sharePathIntent(path, BuildConfig.APPLICATION_ID)
@@ -153,29 +168,33 @@ fun Activity.convertMedia(mediaList: List<Medium>, targetType: String) {
     }
 
     ensureBackgroundThread {
+        var converted = 0
         filesToConvert.forEachIndexed { index, medium ->
-            val fileProgress = ConverterProgress { progressPercent, status ->
-                converterProgress.accept(
-                    progressPercent,
-                    "$status file ${index + 1}/${filesToConvert.size}, current file"
-                )
-            }
-            if (targetExtension == "mp4") {
-                if (medium.path.lowercase().endsWith(".webp")) {
+            val fileProgress = converterProgress.forFile(index + 1, filesToConvert.size)
+            fileProgress.accept(0f, "Converting")
+            val wasConverted = when (targetExtension) {
+                "mp4" -> if (medium.path.lowercase().endsWith(".webp")) {
                     converter.convertAnimatedImageToVideoInSameFolder(medium.path, fileProgress)
                 } else {
                     converter.convertToVideoInSameFolder(medium.path, fileProgress)
                 }
-            } else if (targetExtension == "webp") {
-                converter.convertToWebpInSameFolder(medium.path, fileProgress)
-            } else if (targetExtension == "gif") {
-                if (medium.path.lowercase().endsWith(".webp")) {
+                "webp" -> converter.convertToWebpInSameFolder(medium.path, fileProgress)
+                "gif" -> if (medium.path.lowercase().endsWith(".webp")) {
                     converter.convertAnimatedImageToGifInSameFolder(medium.path, fileProgress)
                 } else {
                     converter.convertVideoToGifInSameFolder(medium.path, fileProgress)
                 }
+                else -> false
             }
+            if (wasConverted) converted++
+            fileProgress.accept(100f, "Converting")
         }
+        val skipped = mediaList.size - converted
+        showConverterSummaryNotification(
+            applicationContext,
+            "Converting file",
+            "Done: converted $converted files, skipped $skipped files."
+        )
         applicationContext.toast("Conversion finished")
     }
 }
@@ -186,12 +205,11 @@ fun Activity.reduceMediaSize(mediaList: List<Medium>, replace: Boolean) {
     ensureBackgroundThread {
         var reduced = 0
         var skipped = 0
-        for (medium in mediaList) {
-            if (converter.reduceFileSize(medium.path, replace, converterProgress)) {
-                reduced++
-            } else {
-                skipped++
-            }
+        mediaList.forEachIndexed { index, medium ->
+            val fileProgress = converterProgress.forFile(index + 1, mediaList.size)
+            fileProgress.accept(0f, "Converting")
+            if (converter.reduceFileSize(medium.path, replace, fileProgress)) reduced++ else skipped++
+            fileProgress.accept(100f, "Converting")
         }
         showConverterSummaryNotification(
             applicationContext,
@@ -227,23 +245,21 @@ fun createConverterProgressNotification(ctx: Context, title: String, closeAtEnd:
 //    notificationManager.notify(notificationId, notification)
 
     return ConverterProgress { progressPercent, status ->
-        ensureBackgroundThread {
-            if (closeAtEnd && progressPercent.toInt() == 100) {
-                notificationManager.cancel(notificationId)
-//                val timer = object: CountDownTimer(1000, 1000) {
-//                    override fun onTick(millisUntilFinished: Long) {}
-//                    override fun onFinish() {notificationManager.cancel(notificationId)}
-//                }
-//                timer.start()
-            } else {
-                notificationBuilder.setProgress(100, progressPercent.toInt(), false)
-                notificationBuilder.setContentText("$status ${progressPercent.toInt()}%...")
-                val notification = notificationBuilder.build()
-                notificationManager.notify(notificationId, notification)
-            }
+        if (closeAtEnd && progressPercent.toInt() == 100) {
+            notificationManager.cancel(notificationId)
+        } else {
+            notificationBuilder.setProgress(100, progressPercent.toInt(), false)
+            notificationBuilder.setContentText("$status ${progressPercent.toInt()}%")
+            val notification = notificationBuilder.build()
+            notificationManager.notify(notificationId, notification)
         }
     }
 }
+
+private fun ConverterProgress.forFile(fileNumber: Int, totalFiles: Int): ConverterProgress =
+    ConverterProgress { progressPercent, status ->
+        accept(progressPercent, "$status file $fileNumber/$totalFiles, current file")
+    }
 
 private fun showConverterSummaryNotification(ctx: Context, title: String, summary: String) {
     val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
