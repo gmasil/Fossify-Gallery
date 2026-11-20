@@ -11,6 +11,7 @@ import org.fossify.commons.extensions.isImageFast
 import org.fossify.commons.helpers.FAVORITES
 import org.fossify.gallery.extensions.config
 import org.fossify.gallery.extensions.getFavoritePaths
+import org.fossify.gallery.models.SimilarityFingerprint
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -74,6 +75,7 @@ class SimilarImageFinder(private val context: Context) {
 
         reportProgress(force = true)
 
+        val fingerprintCache = SimilarityFingerprintCache(context)
         val fingerprints = ArrayList<ImageFingerprint>()
         val hashIndex = PerceptualHashIndex()
         val exactCandidates = HashMap<ExactKey, MutableList<Int>>()
@@ -101,11 +103,41 @@ class SimilarImageFinder(private val context: Context) {
         candidates.forEach candidateLoop@{ file ->
             if (shouldStop()) return emptyList()
             try {
-                val fingerprint = try {
-                    file.createFingerprint()
+                val initialLength = file.length()
+                val initialLastModified = file.lastModified()
+                val contentHash = try {
+                    file.contentSha256(shouldStop)
                 } catch (_: Exception) {
                     null
                 } ?: return@candidateLoop
+                if (file.length() != initialLength || file.lastModified() != initialLastModified) return@candidateLoop
+
+                val cachedEntry = fingerprintCache.get(contentHash, SimilarityFingerprintCache.IMAGE_MEDIA_TYPE)
+                val cachedFingerprint = cachedEntry?.toImageFingerprint(file)
+                if (cachedEntry != null && cachedFingerprint == null) {
+                    fingerprintCache.delete(contentHash, SimilarityFingerprintCache.IMAGE_MEDIA_TYPE)
+                }
+                val fingerprint = try {
+                    cachedFingerprint ?: file.createFingerprint()?.also { created ->
+                        if (file.length() == initialLength && file.lastModified() == initialLastModified) {
+                            fingerprintCache.put(
+                                SimilarityFingerprint(
+                                    contentHash = contentHash,
+                                    mediaType = SimilarityFingerprintCache.IMAGE_MEDIA_TYPE,
+                                    fingerprintVersion = SimilarityFingerprintCache.FINGERPRINT_VERSION,
+                                    perceptualHash = created.hash,
+                                    structuralPixels = created.pixels,
+                                    aspectRatio = created.aspectRatio,
+                                    durationMs = 0L,
+                                    frameHashes = null
+                                )
+                            )
+                        }
+                    }
+                } catch (_: Exception) {
+                    null
+                } ?: return@candidateLoop
+                if (file.length() != initialLength || file.lastModified() != initialLastModified) return@candidateLoop
 
                 // Exact copies belong in the existing duplicate scan, not this similarity result.
                 val exactKey = ExactKey(fingerprint.hash, file.length())
@@ -153,6 +185,7 @@ class SimilarImageFinder(private val context: Context) {
             }
         }
 
+        fingerprintCache.flush()
         if (shouldStop()) return emptyList()
 
         val groups = LinkedHashMap<Int, MutableList<File>>()
@@ -334,6 +367,12 @@ class SimilarImageFinder(private val context: Context) {
 
     private data class ExactKey(val hash: Long, val size: Long)
 
+    private fun SimilarityFingerprint.toImageFingerprint(file: File): ImageFingerprint? {
+        val pixels = structuralPixels ?: return null
+        if (pixels.size != SSIM_PIXEL_COUNT || !aspectRatio.isFinite() || aspectRatio <= 0f) return null
+        return ImageFingerprint(file, perceptualHash, pixels, aspectRatio)
+    }
+
     companion object {
         private const val BUFFER_SIZE = 64 * 1024
         private const val HASH_SIZE = 32
@@ -344,6 +383,7 @@ class SimilarImageFinder(private val context: Context) {
         private const val MIN_SSIM = 0.94
         private const val SSIM_WINDOW_SIZE = 4
         private const val RGB_CHANNEL_COUNT = 3
+        private const val SSIM_PIXEL_COUNT = SSIM_SIZE * SSIM_SIZE * RGB_CHANNEL_COUNT
         private const val SSIM_C1 = 6.5025
         private const val SSIM_C2 = 58.5225
         private const val MIN_LUMINANCE_VARIANCE = 16.0

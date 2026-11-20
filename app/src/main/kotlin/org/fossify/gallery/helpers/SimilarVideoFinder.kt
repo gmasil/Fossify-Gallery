@@ -10,9 +10,11 @@ import org.fossify.commons.extensions.isVideoFast
 import org.fossify.commons.helpers.FAVORITES
 import org.fossify.gallery.extensions.config
 import org.fossify.gallery.extensions.getFavoritePaths
+import org.fossify.gallery.models.SimilarityFingerprint
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
+import java.nio.ByteBuffer
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToLong
@@ -21,6 +23,7 @@ class SimilarVideoFinder(private val context: Context) {
     fun findSimilarVideos(
         folders: Collection<String>,
         onProgress: (checked: Int, total: Int) -> Unit = { _, _ -> },
+        onSimilarVideosFound: (List<File>) -> Unit = {},
         shouldStop: () -> Boolean = { false }
     ): List<List<File>> {
         val fetcher = MediaFetcher(context)
@@ -73,9 +76,11 @@ class SimilarVideoFinder(private val context: Context) {
 
         reportProgress(force = true)
 
+        val fingerprintCache = SimilarityFingerprintCache(context)
         val fingerprints = ArrayList<VideoFingerprint>()
         val hashIndexes = Array(ANCHOR_FRAME_INDICES.size) { PerceptualHashIndex() }
         val parents = ArrayList<Int>()
+        val reportedSimilarIndices = HashSet<Int>()
 
         fun rootOf(index: Int): Int {
             var root = index
@@ -98,15 +103,47 @@ class SimilarVideoFinder(private val context: Context) {
         candidates.forEach candidateFileLoop@{ file ->
             if (shouldStop()) return emptyList()
             try {
-                val fingerprint = try {
-                    file.createFingerprint(shouldStop)
+                val initialLength = file.length()
+                val initialLastModified = file.lastModified()
+                val contentHash = try {
+                    file.contentSha256(shouldStop)
                 } catch (_: Exception) {
                     null
                 } ?: return@candidateFileLoop
+                if (file.length() != initialLength || file.lastModified() != initialLastModified) return@candidateFileLoop
+
+                val cachedEntry = fingerprintCache.get(contentHash, SimilarityFingerprintCache.VIDEO_MEDIA_TYPE)
+                val cachedFingerprint = cachedEntry?.toVideoFingerprint(file)
+                if (cachedEntry != null && cachedFingerprint == null) {
+                    fingerprintCache.delete(contentHash, SimilarityFingerprintCache.VIDEO_MEDIA_TYPE)
+                }
+                val fingerprint = try {
+                    cachedFingerprint ?: file.createFingerprint(shouldStop)?.also { created ->
+                        if (file.length() == initialLength && file.lastModified() == initialLastModified) {
+                            fingerprintCache.put(
+                                SimilarityFingerprint(
+                                    contentHash = contentHash,
+                                    mediaType = SimilarityFingerprintCache.VIDEO_MEDIA_TYPE,
+                                    fingerprintVersion = SimilarityFingerprintCache.FINGERPRINT_VERSION,
+                                    perceptualHash = 0L,
+                                    structuralPixels = null,
+                                    aspectRatio = created.aspectRatio,
+                                    durationMs = created.durationMs,
+                                    frameHashes = created.frameHashes.encodeFrameHashes()
+                                )
+                            )
+                        }
+                    }
+                } catch (_: Exception) {
+                    null
+                } ?: return@candidateFileLoop
+                if (file.length() != initialLength || file.lastModified() != initialLastModified) return@candidateFileLoop
 
                 val index = fingerprints.size
                 parents.add(index)
                 val candidateVotes = HashMap<Int, Int>()
+                val newlySimilarIndices = LinkedHashSet<Int>()
+                var foundSimilarMatch = false
                 ANCHOR_FRAME_INDICES.forEachIndexed { anchorIndex, frameIndex ->
                     val hash = fingerprint.frameHashes[frameIndex] ?: return@forEachIndexed
                     hashIndexes[anchorIndex].findWithin(hash, MAX_CANDIDATE_HASH_DISTANCE).forEach { nearbyIndex ->
@@ -128,12 +165,24 @@ class SimilarVideoFinder(private val context: Context) {
                     } catch (_: Exception) {
                         false
                     }
-                    if (!exactCopy) join(index, nearbyIndex)
+                    if (!exactCopy) {
+                        val nearbyRoot = rootOf(nearbyIndex)
+                        if (nearbyRoot !in reportedSimilarIndices) {
+                            newlySimilarIndices.add(nearbyRoot)
+                        }
+                        join(index, nearbyIndex)
+                        foundSimilarMatch = true
+                    }
                 }
 
                 fingerprints.add(fingerprint)
                 ANCHOR_FRAME_INDICES.forEachIndexed { anchorIndex, frameIndex ->
                     fingerprint.frameHashes[frameIndex]?.let { hash -> hashIndexes[anchorIndex].add(hash, index) }
+                }
+                if (foundSimilarMatch) {
+                    newlySimilarIndices.add(index)
+                    reportedSimilarIndices.addAll(newlySimilarIndices)
+                    onSimilarVideosFound(newlySimilarIndices.map { fingerprints[it].file })
                 }
             } finally {
                 checkedFiles++
@@ -141,6 +190,7 @@ class SimilarVideoFinder(private val context: Context) {
             }
         }
 
+        fingerprintCache.flush()
         if (shouldStop()) return emptyList()
 
         val groups = LinkedHashMap<Int, MutableList<File>>()
@@ -291,6 +341,25 @@ class SimilarVideoFinder(private val context: Context) {
         val frameHashes: List<Long?>
     )
 
+    private fun SimilarityFingerprint.toVideoFingerprint(file: File): VideoFingerprint? {
+        val hashes = frameHashes?.decodeFrameHashes() ?: return null
+        if (durationMs <= 0L || !aspectRatio.isFinite() || aspectRatio <= 0f) return null
+        if (hashes.count { it != null } < MIN_VALID_FRAME_COUNT) return null
+        return VideoFingerprint(file, durationMs, aspectRatio, hashes)
+    }
+
+    private fun List<Long?>.encodeFrameHashes(): ByteArray = ByteBuffer.allocate(SAMPLE_COUNT * FRAME_HASH_BYTE_COUNT)
+        .apply { forEach { putLong(it ?: INVALID_FRAME_HASH) } }
+        .array()
+
+    private fun ByteArray.decodeFrameHashes(): List<Long?>? {
+        if (size != SAMPLE_COUNT * FRAME_HASH_BYTE_COUNT) return null
+        val buffer = ByteBuffer.wrap(this)
+        return List(SAMPLE_COUNT) {
+            buffer.long.takeUnless { hash -> hash == INVALID_FRAME_HASH }
+        }
+    }
+
     companion object {
         private const val BUFFER_SIZE = 64 * 1024
         private const val SAMPLE_COUNT = 10
@@ -307,6 +376,8 @@ class SimilarVideoFinder(private val context: Context) {
         private const val MAX_ASPECT_RATIO_DIFFERENCE = 0.03f
         private const val SECTION_COUNT = 3
         private const val MAX_PROGRESS_UPDATES = 100
+        private const val FRAME_HASH_BYTE_COUNT = 8
+        private const val INVALID_FRAME_HASH = Long.MIN_VALUE
 
         private val SAMPLE_POSITIONS = List(SAMPLE_COUNT) { index -> (index + 0.5) / SAMPLE_COUNT }
         private val ANCHOR_FRAME_INDICES = listOf(1, 4, 7, 9)

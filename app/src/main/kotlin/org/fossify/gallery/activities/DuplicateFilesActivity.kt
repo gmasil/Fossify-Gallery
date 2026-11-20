@@ -135,13 +135,25 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
                     similarImageMedia
                 } else {
                     updateSimilarScanStage(SimilarMediaType.VIDEOS)
+                    val similarVideoMedia = ArrayList<Medium>()
+                    val similarVideoPaths = HashSet<String>()
+
+                    fun addSimilarVideoFiles(files: List<File>) {
+                        val newMedia = files.mapNotNull(::fileToMedium).filter { similarVideoPaths.add(it.path) }
+                        if (newMedia.isNotEmpty()) {
+                            similarVideoMedia.addAll(newMedia)
+                            showPartialSimilarResults(newMedia, showFolderNames)
+                        }
+                    }
+
                     val similarVideoGroups = SimilarVideoFinder(applicationContext).findSimilarVideos(
                         folders,
                         onProgress = { checked, total ->
                             updateSimilarScanProgress(SimilarMediaType.VIDEOS, checked, total)
-                        }
+                        },
+                        onSimilarVideosFound = ::addSimilarVideoFiles
                     ) { shouldStop.get() }
-                    val similarVideoMedia = similarVideoGroups.flatten().mapNotNull(::fileToMedium)
+                    addSimilarVideoFiles(similarVideoGroups.flatten())
                     ArrayList<Medium>(similarImageMedia.size + similarVideoMedia.size).apply {
                         addAll(similarImageMedia)
                         addAll(similarVideoMedia)
