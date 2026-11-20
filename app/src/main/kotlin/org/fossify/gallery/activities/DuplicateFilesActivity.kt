@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beVisible
 import org.fossify.commons.extensions.beVisibleIf
+import org.fossify.commons.extensions.getDuration
 import org.fossify.commons.extensions.getProperPrimaryColor
 import org.fossify.commons.extensions.getProperTextColor
 import org.fossify.commons.extensions.isGif
@@ -37,6 +38,7 @@ import org.fossify.gallery.helpers.FIND_SIMILAR_FILES
 import org.fossify.gallery.helpers.GridSpacingItemDecoration
 import org.fossify.gallery.helpers.PATH
 import org.fossify.gallery.helpers.SimilarImageFinder
+import org.fossify.gallery.helpers.SimilarVideoFinder
 import org.fossify.gallery.helpers.SHOW_ALL
 import org.fossify.gallery.helpers.TYPE_GIFS
 import org.fossify.gallery.helpers.TYPE_RAWS
@@ -103,10 +105,21 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
 
         ensureBackgroundThread {
             val matchedFiles = if (isSimilar) {
-                SimilarImageFinder(applicationContext).findSimilarImages(
+                val similarImages = SimilarImageFinder(applicationContext).findSimilarImages(
                     folders,
                     onProgress = ::updateScanProgress
                 ) { shouldStop.get() }
+
+                if (shouldStop.get()) {
+                    emptyList()
+                } else {
+                    updateScanningText(R.string.scanning_for_similar_videos)
+                    val similarVideos = SimilarVideoFinder(applicationContext).findSimilarVideos(
+                        folders,
+                        onProgress = ::updateScanProgress
+                    ) { shouldStop.get() }
+                    similarImages + similarVideos
+                }
             } else {
                 DuplicateFileFinder(applicationContext).findDuplicates(
                     folders,
@@ -136,6 +149,14 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
                     showDuplicates(thumbnailItems, showFolderNames)
                 }
             }
+        }
+    }
+
+    private fun updateScanningText(stringId: Int) {
+        runOnUiThread {
+            if (isFinishing || isDestroyed || shouldStop.get()) return@runOnUiThread
+            binding.duplicateFilesScanningText.setText(stringId)
+            binding.duplicateFilesProgress.isIndeterminate = true
         }
     }
 
@@ -310,7 +331,7 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
             taken = 0L,
             size = file.length(),
             type = type,
-            videoDuration = 0,
+            videoDuration = if (type == TYPE_VIDEOS) getDuration(path) ?: 0 else 0,
             isFavorite = false,
             deletedTS = 0L,
             mediaStoreId = 0L

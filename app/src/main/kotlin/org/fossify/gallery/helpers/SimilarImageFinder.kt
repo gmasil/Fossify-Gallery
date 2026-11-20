@@ -14,11 +14,8 @@ import org.fossify.gallery.extensions.getFavoritePaths
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
-import java.util.ArrayDeque
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.sqrt
 
 class SimilarImageFinder(private val context: Context) {
     fun findSimilarImages(
@@ -202,7 +199,7 @@ class SimilarImageFinder(private val context: Context) {
 
             ImageFingerprint(
                 file = this,
-                hash = perceptualHash(luminance),
+                hash = PerceptualHash.calculate(luminance),
                 pixels = createSsimPixels(normalizedPixels),
                 aspectRatio = oriented.width.toFloat() / oriented.height
             )
@@ -241,51 +238,6 @@ class SimilarImageFinder(private val context: Context) {
 
     private fun luminance(pixel: Int): Double =
         0.299 * Color.red(pixel) + 0.587 * Color.green(pixel) + 0.114 * Color.blue(pixel)
-
-    private fun perceptualHash(luminance: DoubleArray): Long {
-        val horizontalDct = Array(DCT_SIZE) { DoubleArray(HASH_SIZE) }
-        for (frequency in 0 until DCT_SIZE) {
-            for (row in 0 until HASH_SIZE) {
-                var sum = 0.0
-                for (column in 0 until HASH_SIZE) {
-                    sum += luminance[row * HASH_SIZE + column] * COSINE_MATRIX[column][frequency]
-                }
-                horizontalDct[frequency][row] = sum
-            }
-        }
-
-        val coefficients = Array(DCT_SIZE) { DoubleArray(DCT_SIZE) }
-        for (verticalFrequency in 0 until DCT_SIZE) {
-            for (horizontalFrequency in 0 until DCT_SIZE) {
-                var sum = 0.0
-                for (row in 0 until HASH_SIZE) {
-                    sum += horizontalDct[horizontalFrequency][row] * COSINE_MATRIX[row][verticalFrequency]
-                }
-                coefficients[verticalFrequency][horizontalFrequency] = sum
-            }
-        }
-
-        val acCoefficients = ArrayList<Double>(DCT_SIZE * DCT_SIZE - 1)
-        for (vertical in 0 until DCT_SIZE) {
-            for (horizontal in 0 until DCT_SIZE) {
-                if (vertical != 0 || horizontal != 0) {
-                    acCoefficients.add(coefficients[vertical][horizontal])
-                }
-            }
-        }
-        val median = acCoefficients.sorted()[acCoefficients.size / 2]
-        var hash = 0L
-        var bit = 0
-        for (vertical in 0 until DCT_SIZE) {
-            for (horizontal in 0 until DCT_SIZE) {
-                if (vertical != 0 || horizontal != 0) {
-                    if (coefficients[vertical][horizontal] > median) hash = hash or (1L shl bit)
-                    bit++
-                }
-            }
-        }
-        return hash
-    }
 
     private fun aspectRatiosMatch(first: Float, second: Float): Boolean =
         abs(first - second) / max(first, second) <= MAX_ASPECT_RATIO_DIFFERENCE
@@ -368,60 +320,10 @@ class SimilarImageFinder(private val context: Context) {
 
     private data class ExactKey(val hash: Long, val size: Long)
 
-    private class PerceptualHashIndex {
-        private class Node(val hash: Long) {
-            val indices = ArrayList<Int>()
-            val children = HashMap<Int, Node>()
-        }
-
-        private var root: Node? = null
-
-        fun add(hash: Long, index: Int) {
-            val first = root
-            if (first == null) {
-                root = Node(hash).apply { indices.add(index) }
-                return
-            }
-            var node: Node = first
-
-            while (true) {
-                val distance = hammingDistance(hash, node.hash)
-                if (distance == 0) {
-                    node.indices.add(index)
-                    return
-                }
-                val child = node.children[distance]
-                if (child == null) {
-                    node.children[distance] = Node(hash).apply { indices.add(index) }
-                    return
-                }
-                node = child
-            }
-        }
-
-        fun findWithin(hash: Long, maxDistance: Int): List<Int> {
-            val matches = ArrayList<Int>()
-            val pending = ArrayDeque<Node>()
-            root?.let(pending::addLast)
-            while (pending.isNotEmpty()) {
-                val node = pending.removeLast()
-                val distance = hammingDistance(hash, node.hash)
-                if (distance <= maxDistance) matches.addAll(node.indices)
-                val minimumDistance = distance - maxDistance
-                val maximumDistance = distance + maxDistance
-                node.children.forEach { (edgeDistance, child) ->
-                    if (edgeDistance in minimumDistance..maximumDistance) pending.addLast(child)
-                }
-            }
-            return matches
-        }
-    }
-
     companion object {
         private const val BUFFER_SIZE = 64 * 1024
         private const val HASH_SIZE = 32
         private const val SSIM_SIZE = 16
-        private const val DCT_SIZE = 8
         private const val MAX_DECODE_SIDE = 256
         private const val MAX_PHASH_DISTANCE = 6
         private const val MAX_ASPECT_RATIO_DIFFERENCE = 0.03f
@@ -432,14 +334,5 @@ class SimilarImageFinder(private val context: Context) {
         private const val SSIM_C2 = 58.5225
         private const val MIN_LUMINANCE_VARIANCE = 16.0
         private const val MAX_PROGRESS_UPDATES = 100
-        private val COSINE_MATRIX = Array(HASH_SIZE) { position ->
-            DoubleArray(DCT_SIZE) { frequency ->
-                val scale = if (frequency == 0) sqrt(1.0 / HASH_SIZE) else sqrt(2.0 / HASH_SIZE)
-                scale * cos((2 * position + 1) * frequency * Math.PI / (2 * HASH_SIZE))
-            }
-        }
-
-        private fun hammingDistance(first: Long, second: Long): Int =
-            java.lang.Long.bitCount(first xor second)
     }
 }
