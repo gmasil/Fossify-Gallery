@@ -35,7 +35,9 @@ internal class SimilarityFingerprintCache(context: Context) {
 
     fun put(fingerprint: SimilarityFingerprint) {
         pendingWrites[CacheKey(fingerprint.contentHash, fingerprint.mediaType)] = fingerprint
-        if (pendingWrites.size >= MAX_PENDING_WRITES) flush()
+        if (fingerprint.mediaType == VIDEO_MEDIA_TYPE || pendingWrites.size >= MAX_PENDING_IMAGE_WRITES) {
+            flush()
+        }
     }
 
     fun delete(contentHash: String, mediaType: Int) {
@@ -66,7 +68,7 @@ internal class SimilarityFingerprintCache(context: Context) {
         // Increment when either media fingerprint representation or its generation algorithm changes.
         const val FINGERPRINT_VERSION = 1
 
-        private const val MAX_PENDING_WRITES = 128
+        private const val MAX_PENDING_IMAGE_WRITES = 16
     }
 }
 
