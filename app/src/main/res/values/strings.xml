@@ -55,6 +55,8 @@
     <string name="find_similar_files">Find similar files</string>
     <string name="scanning_for_similar_images">Scanning for similar images…</string>
     <string name="scanning_for_similar_videos">Scanning for similar videos…</string>
+    <string name="similar_files_scan_stage">%1$s · %2$s</string>
+    <string name="similar_files_scan_progress">%1$s · %2$s %3$d/%4$d</string>
     <string name="no_similar_files_found">No similar files found.</string>
     <string name="similar_files_count">Found %1$d similar files</string>
     <string name="scan_files_progress">Checked %1$d of %2$d files</string>

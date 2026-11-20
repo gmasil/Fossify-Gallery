@@ -61,6 +61,8 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
     private val binding by viewBinding(ActivityDuplicateFilesBinding::inflate)
     private val shouldStop = AtomicBoolean(false)
     private var scanStarted = false
+    private var scanFinished = false
+    private var activeSimilarMediaType = SimilarMediaType.IMAGES
     private val isSimilarFiles get() = intent.getBooleanExtra(FIND_SIMILAR_FILES, false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,38 +104,65 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
         binding.duplicateFilesScanningText.setText(
             if (isSimilar) R.string.scanning_for_similar_images else R.string.scanning_for_duplicates
         )
+        if (isSimilar) {
+            updateSimilarScanStage(SimilarMediaType.IMAGES)
+        }
 
         ensureBackgroundThread {
-            val matchedFiles = if (isSimilar) {
-                val similarImages = SimilarImageFinder(applicationContext).findSimilarImages(
+            val media = if (isSimilar) {
+                val similarImageMedia = ArrayList<Medium>()
+                val similarImagePaths = HashSet<String>()
+                val showFolderNames = intent.getBooleanExtra(DUPLICATE_SHOW_FOLDER_NAMES, false)
+
+                fun addSimilarImageFiles(files: List<File>) {
+                    val newMedia = files.mapNotNull(::fileToMedium).filter { similarImagePaths.add(it.path) }
+                    if (newMedia.isNotEmpty()) {
+                        similarImageMedia.addAll(newMedia)
+                        showPartialSimilarResults(newMedia, showFolderNames)
+                    }
+                }
+
+                val similarImageGroups = SimilarImageFinder(applicationContext).findSimilarImages(
                     folders,
-                    onProgress = ::updateScanProgress
+                    onProgress = { checked, total ->
+                        updateSimilarScanProgress(SimilarMediaType.IMAGES, checked, total)
+                    },
+                    onSimilarFilesFound = ::addSimilarImageFiles
                 ) { shouldStop.get() }
+                addSimilarImageFiles(similarImageGroups.flatten())
 
                 if (shouldStop.get()) {
-                    emptyList()
+                    similarImageMedia
                 } else {
-                    updateScanningText(R.string.scanning_for_similar_videos)
-                    val similarVideos = SimilarVideoFinder(applicationContext).findSimilarVideos(
+                    updateSimilarScanStage(SimilarMediaType.VIDEOS)
+                    val similarVideoGroups = SimilarVideoFinder(applicationContext).findSimilarVideos(
                         folders,
-                        onProgress = ::updateScanProgress
+                        onProgress = { checked, total ->
+                            updateSimilarScanProgress(SimilarMediaType.VIDEOS, checked, total)
+                        }
                     ) { shouldStop.get() }
-                    similarImages + similarVideos
+                    val similarVideoMedia = similarVideoGroups.flatten().mapNotNull(::fileToMedium)
+                    ArrayList<Medium>(similarImageMedia.size + similarVideoMedia.size).apply {
+                        addAll(similarImageMedia)
+                        addAll(similarVideoMedia)
+                    }.filterTo(ArrayList()) { File(it.path).isFile }
                 }
             } else {
                 DuplicateFileFinder(applicationContext).findDuplicates(
                     folders,
                     onProgress = ::updateScanProgress
-                ) { shouldStop.get() }
+                ) { shouldStop.get() }.flatten().mapNotNull(::fileToMedium) as ArrayList<Medium>
             }
-            val media = matchedFiles.flatten().mapNotNull(::fileToMedium) as ArrayList<Medium>
-            val thumbnailItems = ArrayList<ThumbnailItem>(media)
             val showFolderNames = intent.getBooleanExtra(DUPLICATE_SHOW_FOLDER_NAMES, false)
 
             runOnUiThread {
                 if (isFinishing || isDestroyed || shouldStop.get()) return@runOnUiThread
+                scanFinished = true
                 binding.duplicateFilesProgress.beGone()
                 binding.duplicateFilesScanningText.beGone()
+                val title = getString(if (isSimilar) R.string.similar_files else R.string.duplicate_files)
+                setTitle(title)
+                binding.duplicateFilesToolbar.title = title
                 binding.duplicateFilesPlaceholder.apply {
                     text = if (media.isEmpty()) {
                         getString(if (isSimilar) R.string.no_similar_files_found else R.string.no_duplicate_files_found)
@@ -146,32 +175,104 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
                     beVisibleIf(media.isEmpty())
                 }
                 if (media.isNotEmpty()) {
-                    showDuplicates(thumbnailItems, showFolderNames)
+                    showOrUpdateDuplicates(ArrayList<ThumbnailItem>(media), showFolderNames)
                 }
             }
         }
     }
 
-    private fun updateScanningText(stringId: Int) {
+    private fun updateSimilarScanStage(type: SimilarMediaType) {
         runOnUiThread {
             if (isFinishing || isDestroyed || shouldStop.get()) return@runOnUiThread
-            binding.duplicateFilesScanningText.setText(stringId)
-            binding.duplicateFilesProgress.isIndeterminate = true
+            updateSimilarScanUi(type, null, null)
+        }
+    }
+
+    private fun updateSimilarScanProgress(type: SimilarMediaType, checked: Int, total: Int) {
+        runOnUiThread {
+            if (isFinishing || isDestroyed || shouldStop.get()) return@runOnUiThread
+            updateSimilarScanUi(type, checked, total)
+        }
+    }
+
+    private fun updateSimilarScanUi(type: SimilarMediaType, checked: Int?, total: Int?) {
+        activeSimilarMediaType = type
+        val title = if (checked != null && total != null) {
+            getString(
+                R.string.similar_files_scan_progress,
+                getString(R.string.similar_files),
+                getString(type.labelStringId),
+                checked,
+                total
+            )
+        } else {
+            getString(R.string.similar_files_scan_stage, getString(R.string.similar_files), getString(type.labelStringId))
+        }
+        setTitle(title)
+        binding.duplicateFilesToolbar.title = title
+
+        val hasResults = (binding.duplicateFilesGrid.adapter?.itemCount ?: 0) > 0
+        if (hasResults) {
+            binding.duplicateFilesScanningText.beGone()
+            binding.duplicateFilesProgress.beGone()
+        } else {
+            binding.duplicateFilesScanningText.setText(type.scanningStringId)
+            binding.duplicateFilesScanningText.beVisible()
+            binding.duplicateFilesProgress.beVisible()
+            if (checked == null || total == null) {
+                binding.duplicateFilesProgress.isIndeterminate = true
+            } else {
+                updateProgressIndicator(checked, total)
+            }
         }
     }
 
     private fun updateScanProgress(checked: Int, total: Int) {
         runOnUiThread {
             if (isFinishing || isDestroyed || shouldStop.get()) return@runOnUiThread
-            val progressMax = total.coerceAtLeast(1)
-            binding.duplicateFilesProgress.apply {
-                if (isIndeterminate) {
-                    isIndeterminate = false
-                }
-                max = progressMax
-                setProgressCompat(checked.coerceIn(0, progressMax), false)
-            }
+            updateProgressIndicator(checked, total)
             binding.duplicateFilesScanningText.text = getString(R.string.scan_files_progress, checked, total)
+        }
+    }
+
+    private fun updateProgressIndicator(checked: Int, total: Int) {
+        val progressMax = total.coerceAtLeast(1)
+        binding.duplicateFilesProgress.apply {
+            beVisible()
+            if (isIndeterminate) {
+                isIndeterminate = false
+            }
+            max = progressMax
+            setProgressCompat(checked.coerceIn(0, progressMax), false)
+        }
+    }
+
+    private fun showPartialSimilarResults(media: List<Medium>, showFolderNames: Boolean) {
+        if (media.isEmpty()) return
+        val newMedia = ArrayList(media)
+        runOnUiThread {
+            if (isFinishing || isDestroyed || shouldStop.get()) return@runOnUiThread
+            binding.duplicateFilesPlaceholder.beGone()
+            binding.duplicateFilesScanningText.beGone()
+            binding.duplicateFilesProgress.beGone()
+            val adapter = binding.duplicateFilesGrid.adapter as? MediaAdapter
+            if (adapter == null) {
+                showDuplicates(ArrayList<ThumbnailItem>(newMedia), showFolderNames)
+            } else {
+                adapter.appendMedia(newMedia)
+                binding.duplicateFilesGrid.beVisible()
+            }
+        }
+    }
+
+    private fun showOrUpdateDuplicates(media: ArrayList<ThumbnailItem>, showFolderNames: Boolean) {
+        val adapter = binding.duplicateFilesGrid.adapter as? MediaAdapter
+        if (adapter == null) {
+            showDuplicates(media, showFolderNames)
+        } else {
+            adapter.updateMedia(media)
+            updateMediaGridDecoration(media)
+            binding.duplicateFilesGrid.beVisible()
         }
     }
 
@@ -246,10 +347,18 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
             val isEmpty = (binding.duplicateFilesGrid.adapter?.itemCount ?: 0) == 0
             if (isEmpty) {
                 binding.duplicateFilesGrid.beGone()
-                binding.duplicateFilesPlaceholder.setText(
-                    if (isSimilarFiles) R.string.no_similar_files_found else R.string.no_duplicate_files_found
-                )
-                binding.duplicateFilesPlaceholder.beVisible()
+                if (scanFinished) {
+                    binding.duplicateFilesPlaceholder.setText(
+                        if (isSimilarFiles) R.string.no_similar_files_found else R.string.no_duplicate_files_found
+                    )
+                    binding.duplicateFilesPlaceholder.beVisible()
+                } else if (isSimilarFiles) {
+                    binding.duplicateFilesPlaceholder.beGone()
+                    binding.duplicateFilesScanningText.setText(activeSimilarMediaType.scanningStringId)
+                    binding.duplicateFilesScanningText.beVisible()
+                    binding.duplicateFilesProgress.isIndeterminate = true
+                    binding.duplicateFilesProgress.beVisible()
+                }
             }
         }
     }
@@ -336,5 +445,10 @@ class DuplicateFilesActivity : SimpleActivity(), MediaOperationsListener {
             deletedTS = 0L,
             mediaStoreId = 0L
         )
+    }
+
+    private enum class SimilarMediaType(val labelStringId: Int, val scanningStringId: Int) {
+        IMAGES(R.string.images, R.string.scanning_for_similar_images),
+        VIDEOS(R.string.videos, R.string.scanning_for_similar_videos)
     }
 }

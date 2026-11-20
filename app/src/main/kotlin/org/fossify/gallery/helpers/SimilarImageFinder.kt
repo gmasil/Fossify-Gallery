@@ -21,6 +21,7 @@ class SimilarImageFinder(private val context: Context) {
     fun findSimilarImages(
         folders: Collection<String>,
         onProgress: (checked: Int, total: Int) -> Unit = { _, _ -> },
+        onSimilarFilesFound: (List<File>) -> Unit = {},
         shouldStop: () -> Boolean = { false }
     ): List<List<File>> {
         val fetcher = MediaFetcher(context)
@@ -77,6 +78,7 @@ class SimilarImageFinder(private val context: Context) {
         val hashIndex = PerceptualHashIndex()
         val exactCandidates = HashMap<ExactKey, MutableList<Int>>()
         val parents = ArrayList<Int>()
+        val reportedSimilarIndices = HashSet<Int>()
 
         fun rootOf(index: Int): Int {
             var root = index
@@ -120,19 +122,31 @@ class SimilarImageFinder(private val context: Context) {
 
                 val index = fingerprints.size
                 parents.add(index)
+                fingerprints.add(fingerprint)
+                val newlySimilarIndices = LinkedHashSet<Int>()
+                var foundSimilarMatch = false
                 val nearbyCandidates = hashIndex.findWithin(fingerprint.hash, MAX_PHASH_DISTANCE)
                 nearbyCandidates.forEach nearbyLoop@{ nearbyIndex ->
                     if (shouldStop()) return emptyList()
                     val other = fingerprints[nearbyIndex]
                     if (!aspectRatiosMatch(fingerprint.aspectRatio, other.aspectRatio)) return@nearbyLoop
                     if (structuralSimilarity(fingerprint.pixels, other.pixels) >= MIN_SSIM) {
+                        val nearbyRoot = rootOf(nearbyIndex)
+                        if (nearbyRoot !in reportedSimilarIndices) {
+                            newlySimilarIndices.add(nearbyRoot)
+                        }
                         join(index, nearbyIndex)
+                        foundSimilarMatch = true
                     }
                 }
 
-                fingerprints.add(fingerprint)
                 hashIndex.add(fingerprint.hash, index)
                 exactCandidates.getOrPut(exactKey) { ArrayList() }.add(index)
+                if (foundSimilarMatch) {
+                    newlySimilarIndices.add(index)
+                    reportedSimilarIndices.addAll(newlySimilarIndices)
+                    onSimilarFilesFound(newlySimilarIndices.map { fingerprints[it].file })
+                }
             } finally {
                 checkedFiles++
                 reportProgress()

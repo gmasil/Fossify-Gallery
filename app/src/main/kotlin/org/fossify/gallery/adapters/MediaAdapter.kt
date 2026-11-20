@@ -668,6 +668,18 @@ class MediaAdapter(
         }
     }
 
+    fun appendMedia(newMedia: List<Medium>) {
+        val existingPaths = media.filterIsInstance<Medium>().mapTo(HashSet()) { it.path }
+        val additions = newMedia.filter { existingPaths.add(it.path) }
+        if (additions.isEmpty()) return
+
+        val insertionStart = media.size
+        media.addAll(additions)
+        currentMediaHash = media.hashCode()
+        listener?.updateMediaGridDecoration(media)
+        notifyItemRangeInserted(insertionStart, additions.size)
+    }
+
     fun updateDisplayFilenames(displayFilenames: Boolean) {
         this.displayFilenames = displayFilenames
         notifyDataSetChanged()
