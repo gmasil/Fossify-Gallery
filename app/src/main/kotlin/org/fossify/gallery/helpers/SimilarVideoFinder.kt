@@ -15,6 +15,7 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.nio.ByteBuffer
+import java.util.TreeMap
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToLong
@@ -63,7 +64,19 @@ class SimilarVideoFinder(private val context: Context) {
             }
         }
         val totalFiles = filePaths.size
-        var checkedFiles = totalFiles - candidates.size
+
+        val metadata = ArrayList<VideoMetadata>()
+        candidates.forEach { file ->
+            if (shouldStop()) return emptyList()
+            try {
+                file.readVideoMetadata()?.let(metadata::add)
+            } catch (_: Exception) {
+            }
+        }
+        if (shouldStop()) return emptyList()
+
+        val fingerprintCandidates = metadata.filterWithPotentialMatches()
+        var checkedFiles = totalFiles - fingerprintCandidates.size
         var lastReportedCount = -1
         val progressInterval = (totalFiles / MAX_PROGRESS_UPDATES).coerceAtLeast(1)
 
@@ -100,11 +113,13 @@ class SimilarVideoFinder(private val context: Context) {
             if (firstRoot != secondRoot) parents[secondRoot] = firstRoot
         }
 
-        candidates.forEach candidateFileLoop@{ file ->
+        fingerprintCandidates.forEach candidateFileLoop@{ videoMetadata ->
+            val file = videoMetadata.file
             if (shouldStop()) return emptyList()
             try {
-                val initialLength = file.length()
-                val initialLastModified = file.lastModified()
+                val initialLength = videoMetadata.fileLength
+                val initialLastModified = videoMetadata.lastModified
+                if (file.length() != initialLength || file.lastModified() != initialLastModified) return@candidateFileLoop
                 val contentHash = try {
                     file.contentSha256(shouldStop)
                 } catch (_: Exception) {
@@ -113,12 +128,12 @@ class SimilarVideoFinder(private val context: Context) {
                 if (file.length() != initialLength || file.lastModified() != initialLastModified) return@candidateFileLoop
 
                 val cachedEntry = fingerprintCache.get(contentHash, SimilarityFingerprintCache.VIDEO_MEDIA_TYPE)
-                val cachedFingerprint = cachedEntry?.toVideoFingerprint(file)
+                val cachedFingerprint = cachedEntry?.toVideoFingerprint(file, videoMetadata)
                 if (cachedEntry != null && cachedFingerprint == null) {
                     fingerprintCache.delete(contentHash, SimilarityFingerprintCache.VIDEO_MEDIA_TYPE)
                 }
                 val fingerprint = try {
-                    cachedFingerprint ?: file.createFingerprint(shouldStop)?.also { created ->
+                    cachedFingerprint ?: file.createFingerprint(shouldStop, videoMetadata)?.also { created ->
                         if (file.length() == initialLength && file.lastModified() == initialLastModified) {
                             fingerprintCache.put(
                                 SimilarityFingerprint(
@@ -201,7 +216,9 @@ class SimilarVideoFinder(private val context: Context) {
         return groups.values.filter { it.size > 1 }
     }
 
-    private fun File.createFingerprint(shouldStop: () -> Boolean): VideoFingerprint? {
+    private fun File.readVideoMetadata(): VideoMetadata? {
+        val initialLength = length()
+        val initialLastModified = lastModified()
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(absolutePath)
@@ -227,14 +244,75 @@ class SimilarVideoFinder(private val context: Context) {
                 width.toFloat() / height
             }
 
+            if (length() != initialLength || lastModified() != initialLastModified) return null
+            return VideoMetadata(this, durationMs, aspectRatio, rotation, initialLength, initialLastModified)
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun List<VideoMetadata>.filterWithPotentialMatches(): List<VideoMetadata> {
+        if (size < 2) return emptyList()
+
+        val sorted = withIndex().sortedBy { it.value.durationMs }
+        val potentialMatches = BooleanArray(size)
+        val activeByAspectRatio = TreeMap<Float, MutableList<Int>>()
+        var firstActiveIndex = 0
+
+        sorted.forEachIndexed { sortedIndex, indexedMetadata ->
+            while (
+                firstActiveIndex < sortedIndex &&
+                indexedMetadata.value.durationMs - sorted[firstActiveIndex].value.durationMs >
+                MAX_POTENTIAL_DURATION_DIFFERENCE_MS
+            ) {
+                val expired = sorted[firstActiveIndex]
+                val expiredAspectMatches = activeByAspectRatio[expired.value.aspectRatio]
+                expiredAspectMatches?.remove(expired.index)
+                if (expiredAspectMatches.isNullOrEmpty()) {
+                    activeByAspectRatio.remove(expired.value.aspectRatio)
+                }
+                firstActiveIndex++
+            }
+
+            val metadataIndex = indexedMetadata.index
+            val aspectRatio = indexedMetadata.value.aspectRatio
+            val conservativeAspectTolerance = MAX_ASPECT_RATIO_DIFFERENCE + PREFILTER_ASPECT_TOLERANCE_MARGIN
+            val minimumAspectRatio = aspectRatio * (1f - conservativeAspectTolerance)
+            val maximumAspectRatio = aspectRatio / (1f - conservativeAspectTolerance)
+            val aspectMatches = activeByAspectRatio.subMap(minimumAspectRatio, true, maximumAspectRatio, true)
+
+            if (aspectMatches.isNotEmpty()) {
+                potentialMatches[metadataIndex] = true
+                aspectMatches.values.forEach { indices ->
+                    indices.forEach { potentialMatches[it] = true }
+                }
+            }
+
+            activeByAspectRatio.getOrPut(aspectRatio) { ArrayList() }.add(metadataIndex)
+        }
+
+        return filterIndexed { index, _ -> potentialMatches[index] }
+    }
+
+    private fun File.createFingerprint(
+        shouldStop: () -> Boolean,
+        metadata: VideoMetadata
+    ): VideoFingerprint? {
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(absolutePath)
+
             val frameHashes = SAMPLE_POSITIONS.map { position ->
                 if (shouldStop()) return null
-                val timeUs = (durationMs * 1000.0 * position).roundToLong()
-                retriever.getScaledFrame(timeUs, rotation)?.let(::frameHash)
+                val timeUs = (metadata.durationMs * 1000.0 * position).roundToLong()
+                retriever.getScaledFrame(timeUs, metadata.rotation)?.let(::frameHash)
             }
             if (frameHashes.count { it != null } < MIN_VALID_FRAME_COUNT) return null
 
-            return VideoFingerprint(this, durationMs, aspectRatio, frameHashes)
+            return VideoFingerprint(this, metadata.durationMs, metadata.aspectRatio, frameHashes)
         } finally {
             try {
                 retriever.release()
@@ -341,11 +419,20 @@ class SimilarVideoFinder(private val context: Context) {
         val frameHashes: List<Long?>
     )
 
-    private fun SimilarityFingerprint.toVideoFingerprint(file: File): VideoFingerprint? {
+    private data class VideoMetadata(
+        val file: File,
+        val durationMs: Long,
+        val aspectRatio: Float,
+        val rotation: Int,
+        val fileLength: Long,
+        val lastModified: Long
+    )
+
+    private fun SimilarityFingerprint.toVideoFingerprint(file: File, metadata: VideoMetadata): VideoFingerprint? {
         val hashes = frameHashes?.decodeFrameHashes() ?: return null
-        if (durationMs <= 0L || !aspectRatio.isFinite() || aspectRatio <= 0f) return null
+        if (durationMs != metadata.durationMs || aspectRatio != metadata.aspectRatio) return null
         if (hashes.count { it != null } < MIN_VALID_FRAME_COUNT) return null
-        return VideoFingerprint(file, durationMs, aspectRatio, hashes)
+        return VideoFingerprint(file, metadata.durationMs, metadata.aspectRatio, hashes)
     }
 
     private fun List<Long?>.encodeFrameHashes(): ByteArray = ByteBuffer.allocate(SAMPLE_COUNT * FRAME_HASH_BYTE_COUNT)
@@ -373,7 +460,9 @@ class SimilarVideoFinder(private val context: Context) {
         private const val MIN_CANDIDATE_ANCHOR_MATCHES = 2
         private const val MIN_DURATION_TOLERANCE_MS = 50L
         private const val MAX_DURATION_TOLERANCE_MS = 1_000L
+        private const val MAX_POTENTIAL_DURATION_DIFFERENCE_MS = MAX_DURATION_TOLERANCE_MS
         private const val MAX_ASPECT_RATIO_DIFFERENCE = 0.03f
+        private const val PREFILTER_ASPECT_TOLERANCE_MARGIN = 0.0001f
         private const val SECTION_COUNT = 3
         private const val MAX_PROGRESS_UPDATES = 100
         private const val FRAME_HASH_BYTE_COUNT = 8
